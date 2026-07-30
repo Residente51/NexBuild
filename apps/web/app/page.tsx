@@ -1,6 +1,8 @@
 import { Navbar } from "../components/layout/Navbar";
 import { Hero } from "../components/sections/Hero";
-import { Card } from "../components/ui/Card";
+
+import { ComponentCard } from "@/components/catalog/ComponentCard";
+import { components } from "@/data/components";
 
 export default function Home() {
   return (
@@ -11,17 +13,18 @@ export default function Home() {
 
       <section className="bg-black px-6 py-16">
         <div className="mx-auto max-w-7xl">
-          <Card className="p-8">
-            <h2 className="text-3xl font-bold text-white">
-              Card funcionando 🎉
-            </h2>
+          <h2 className="mb-8 text-4xl font-black text-white">
+            Componentes destacados
+          </h2>
 
-            <p className="mt-4 text-zinc-400">
-              Esta es la primera prueba del componente Card. Más adelante será
-              utilizada para mostrar procesadores, tarjetas gráficas,
-              memorias RAM, SSD y muchos otros componentes.
-            </p>
-          </Card>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {components.map((component) => (
+              <ComponentCard
+                key={component.id}
+                component={component}
+              />
+            ))}
+          </div>
         </div>
       </section>
     </>
