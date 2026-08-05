@@ -3,6 +3,7 @@ import type { PCComponent } from "@/types/component";
 export const components: PCComponent[] = [
   {
     id: 1,
+    slug: "amd-ryzen-5-7500f",
     name: "Ryzen 5 7500F",
     brand: "AMD",
     category: "cpu",
@@ -10,6 +11,7 @@ export const components: PCComponent[] = [
   },
   {
     id: 2,
+    slug: "nvidia-geforce-rtx-5070",
     name: "GeForce RTX 5070",
     brand: "NVIDIA",
     category: "gpu",
@@ -17,6 +19,7 @@ export const components: PCComponent[] = [
   },
   {
     id: 3,
+    slug: "kingston-fury-beast-32gb",
     name: "Kingston Fury Beast 32GB",
     brand: "Kingston",
     category: "ram",
@@ -24,6 +27,7 @@ export const components: PCComponent[] = [
   },
   {
     id: 4,
+    slug: "samsung-990-pro-1tb",
     name: "Samsung 990 Pro 1TB",
     brand: "Samsung",
     category: "storage",
