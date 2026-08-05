@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { SearchBar } from "@/components/ui/SearchBar";
 import { components } from "@/data/components";
+import { CATEGORY_LABELS } from "@/lib/categories";
 
 import { ComponentGrid } from "./ComponentGrid";
 import { EmptyState } from "./EmptyState";
@@ -14,10 +15,12 @@ export function Catalog() {
   const filteredComponents = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    if (!query) return components;
+    if (!query) {
+      return components;
+    }
 
     return components.filter((component) =>
-      [component.name, component.brand, component.category]
+      [component.name, component.brand, CATEGORY_LABELS[component.category]]
         .join(" ")
         .toLowerCase()
         .includes(query)

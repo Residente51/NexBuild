@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/Button";
+import { CATEGORY_LABELS } from "@/lib/categories";
 import type { PCComponent } from "@/types/component";
 
 interface ComponentCardProps {
@@ -17,7 +18,7 @@ export function ComponentCard({
       <div className="space-y-4 p-6">
         <div>
           <p className="text-sm text-blue-400">
-            {component.category}
+            {CATEGORY_LABELS[component.category]}
           </p>
 
           <h2 className="mt-1 text-2xl font-bold text-white">
