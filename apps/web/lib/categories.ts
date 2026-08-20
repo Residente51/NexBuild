@@ -10,6 +10,10 @@ export const COMPONENT_CATEGORIES = [
   "gpu",
   "ram",
   "storage",
+  "motherboard",
+  "case",
+  "cooler",
+  "psu",
 ] as const;
 
 export type ComponentCategory = (typeof COMPONENT_CATEGORIES)[number];
@@ -18,5 +22,9 @@ export const CATEGORY_LABELS: Record<ComponentCategory, string> = {
   cpu: "Procesador",
   gpu: "Tarjeta Gráfica",
   ram: "Memoria RAM",
-  storage: "SSD",
+  storage: "Almacenamiento",
+  motherboard: "Placa Madre",
+  case: "Gabinete",
+  cooler: "Refrigeración",
+  psu: "Fuente de Poder",
 };

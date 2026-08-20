@@ -3,29 +3,25 @@
 import { useMemo, useState } from "react";
 
 import { SearchBar } from "@/components/ui/SearchBar";
-import { components } from "@/data/components";
-import { CATEGORY_LABELS } from "@/lib/categories";
+import { filterComponents } from "@/lib/components/search";
+import type { PCComponent } from "@/types/component";
 
 import { ComponentGrid } from "./ComponentGrid";
 import { EmptyState } from "./EmptyState";
 
-export function Catalog() {
+interface CatalogProps {
+  components: PCComponent[];
+}
+
+export function Catalog({
+  components,
+}: CatalogProps) {
   const [search, setSearch] = useState("");
 
-  const filteredComponents = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) {
-      return components;
-    }
-
-    return components.filter((component) =>
-      [component.name, component.brand, CATEGORY_LABELS[component.category]]
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    );
-  }, [search]);
+  const filteredComponents = useMemo(
+    () => filterComponents(components, search),
+    [components, search]
+  );
 
   return (
     <>

@@ -1,6 +1,9 @@
 import { Catalog } from "@/components/catalog/Catalog";
+import { getAllComponents } from "@/lib/components/repository";
 
 export default function ComponentsPage() {
+  const components = getAllComponents();
+
   return (
     <main className="min-h-screen bg-black px-6 py-12">
       <div className="mx-auto max-w-7xl">
@@ -14,7 +17,7 @@ export default function ComponentsPage() {
           </p>
         </header>
 
-        <Catalog />
+        <Catalog components={components} />
       </div>
     </main>
   );
