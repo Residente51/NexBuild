@@ -1,0 +1,229 @@
+"use client";
+
+/**
+ * Sticky sidebar panel that shows:
+ * - Total estimated price (formatted as CLP).
+ * - Compatibility status with issue details.
+ * - Copy-to-clipboard build export.
+ */
+
+import { useState, useCallback } from "react";
+import { CATEGORY_LABELS } from "@/lib/categories";
+import type { ComponentCategory } from "@/lib/categories";
+import type {
+  BuildCompatibilityReport,
+  BuildSelection,
+  CompatibilityStatus,
+} from "@/types/component";
+
+// ---------------------------------------------------------------------------
+// Status visual config
+// ---------------------------------------------------------------------------
+
+const STATUS_LABELS: Record<CompatibilityStatus, string> = {
+  compatible: "Compatible",
+  warning: "Con Advertencias",
+  incompatible: "Incompatible",
+};
+
+const STATUS_CONFIG: Record<
+  CompatibilityStatus,
+  { label: string; dotClass: string; bgClass: string; borderClass: string }
+> = {
+  compatible: {
+    label: "Compatible",
+    dotClass: "bg-builder-success",
+    bgClass: "bg-builder-success/10",
+    borderClass: "border-builder-success/30",
+  },
+  warning: {
+    label: "Advertencias",
+    dotClass: "bg-builder-warning",
+    bgClass: "bg-builder-warning/10",
+    borderClass: "border-builder-warning/30",
+  },
+  incompatible: {
+    label: "Incompatible",
+    dotClass: "bg-builder-danger",
+    bgClass: "bg-builder-danger/10",
+    borderClass: "border-builder-danger/30",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Build text generator
+// ---------------------------------------------------------------------------
+
+/** Order in which single-slot categories appear in the export. */
+const EXPORT_SLOT_ORDER: Exclude<keyof BuildSelection, "storage">[] = [
+  "cpu",
+  "motherboard",
+  "ram",
+  "gpu",
+  "cooler",
+  "psu",
+  "case",
+];
+
+function generateBuildText(
+  build: BuildSelection,
+  totalPrice: number,
+  status: CompatibilityStatus,
+): string {
+  const lines: string[] = ["🖥️ NexBuild - Mi Configuración", ""];
+
+  for (const slot of EXPORT_SLOT_ORDER) {
+    const component = build[slot];
+    const label = CATEGORY_LABELS[slot as ComponentCategory];
+    if (component) {
+      lines.push(`${label}: ${component.name} - $${component.price.toLocaleString("es-CL")}`);
+    }
+  }
+
+  for (const device of build.storage) {
+    lines.push(`Almacenamiento: ${device.name} - $${device.price.toLocaleString("es-CL")}`);
+  }
+
+  lines.push("");
+  lines.push(`💰 Total estimado: $${totalPrice.toLocaleString("es-CL")} CLP`);
+  lines.push(`⚙️ Estado: ${STATUS_LABELS[status]}`);
+
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+interface BuildSummaryPanelProps {
+  build: BuildSelection;
+  totalPrice: number;
+  report: BuildCompatibilityReport;
+  onClearBuild: () => void;
+  hasComponents: boolean;
+}
+
+export function BuildSummaryPanel({
+  build,
+  totalPrice,
+  report,
+  onClearBuild,
+  hasComponents,
+}: BuildSummaryPanelProps) {
+  const statusCfg = STATUS_CONFIG[report.status];
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    const text = generateBuildText(build, totalPrice, report.status);
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [build, totalPrice, report.status]);
+
+  return (
+    <aside
+      id="build-summary-panel"
+      className="sticky top-6 space-y-5"
+    >
+      {/* Price card */}
+      <div className="rounded-xl border border-builder-border bg-builder-surface p-5">
+        <p className="text-xs font-medium tracking-wide text-builder-muted uppercase">
+          Total estimado
+        </p>
+        <p className="mt-1 text-3xl font-bold tracking-tight text-builder-text">
+          ${totalPrice.toLocaleString("es-CL")}
+        </p>
+        <p className="mt-1 text-xs text-builder-muted">
+          Consumo estimado: ~{report.totalWattageEstimated}W
+        </p>
+      </div>
+
+      {/* Compatibility card */}
+      <div className="rounded-xl border border-builder-border bg-builder-surface p-5">
+        <p className="mb-3 text-xs font-medium tracking-wide text-builder-muted uppercase">
+          Compatibilidad
+        </p>
+
+        {/* Status badge */}
+        <div
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5
+                      text-xs font-semibold ${statusCfg.bgClass} ${statusCfg.borderClass}`}
+        >
+          <span className={`inline-block h-2 w-2 rounded-full ${statusCfg.dotClass}`} />
+          <span className="text-builder-text">{statusCfg.label}</span>
+        </div>
+
+        {/* Issues list */}
+        {report.issues.length > 0 && (
+          <ul className="mt-4 space-y-2.5">
+            {report.issues.map((issue) => (
+              <li
+                key={issue.code}
+                className="flex items-start gap-2.5 text-xs leading-relaxed"
+              >
+                <span
+                  className={`mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                    issue.status === "incompatible"
+                      ? "bg-builder-danger"
+                      : "bg-builder-warning"
+                  }`}
+                />
+                <span className="text-builder-muted">{issue.message}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Empty state */}
+        {report.issues.length === 0 && hasComponents && (
+          <p className="mt-3 text-xs text-builder-success/80">
+            Todos los componentes seleccionados son compatibles entre sí.
+          </p>
+        )}
+      </div>
+
+      {/* Copy build */}
+      {hasComponents && (
+        <button
+          onClick={handleCopy}
+          className={`flex w-full items-center justify-center gap-2 rounded-xl border
+                     px-4 py-2.5 text-sm font-medium transition-colors
+                     ${
+                       copied
+                         ? "border-builder-success/40 text-builder-success"
+                         : "border-builder-border bg-builder-surface text-builder-text hover:border-builder-accent/40 hover:text-builder-accent"
+                     }`}
+        >
+          {copied ? (
+            <>
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              ¡Copiado! ✓
+            </>
+          ) : (
+            <>
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                <path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              Copiar configuración
+            </>
+          )}
+        </button>
+      )}
+
+      {/* Clear build */}
+      {hasComponents && (
+        <button
+          onClick={onClearBuild}
+          className="w-full rounded-xl border border-builder-border bg-builder-surface
+                     px-4 py-2.5 text-sm font-medium text-builder-muted
+                     transition-colors hover:border-builder-danger/40
+                     hover:text-builder-danger"
+        >
+          Limpiar configuración
+        </button>
+      )}
+    </aside>
+  );
+}

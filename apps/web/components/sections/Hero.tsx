@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "../ui/Button";
 
 export function Hero() {
@@ -27,9 +28,11 @@ export function Hero() {
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
-            <Button variant="primary">
-              Crear mi PC
-            </Button>
+            <Link href="/builder">
+              <Button variant="primary">
+                Crear mi PC
+              </Button>
+            </Link>
 
             <Button variant="secondary">
               Explorar componentes

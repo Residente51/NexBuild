@@ -10,6 +10,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Builder design tokens */
+  --color-builder-bg: #0D1117;
+  --color-builder-surface: #161B22;
+  --color-builder-border: #21262D;
+  --color-builder-text: #E6EDF3;
+  --color-builder-muted: #8B949E;
+  --color-builder-accent: #58A6FF;
+  --color-builder-success: #3FB950;
+  --color-builder-warning: #D29922;
+  --color-builder-danger: #F85149;
 }
 
 @media (prefers-color-scheme: dark) {
