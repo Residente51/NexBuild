@@ -142,17 +142,17 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
       }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/70" />
 
       {/* Panel */}
       <div
         id="catalog-modal-panel"
         className="relative flex max-h-[85vh] w-full max-w-2xl flex-col
-                   overflow-hidden rounded-2xl border border-builder-border
-                   bg-builder-bg shadow-2xl"
+                   overflow-hidden rounded-2xl border border-white/5
+                   bg-[#20292D] shadow-xl shadow-black/40"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-builder-border px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[#394045] px-6 py-4">
           <div>
             <h2 className="text-lg font-bold text-builder-text">
               Elegir {categoryLabel}
@@ -174,7 +174,7 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
         </div>
 
         {/* Product list */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-6">
           {filtered.length === 0 ? (
             <div className="flex h-40 items-center justify-center">
               <p className="text-sm text-builder-muted">
@@ -182,33 +182,33 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filtered.map((item) => {
                 const badges = getSpecBadges(item);
                 return (
                   <div
                     key={item.id}
                     className="group flex items-center justify-between gap-4 rounded-xl
-                               border border-builder-border bg-builder-surface p-4
-                               transition-colors duration-200 hover:border-builder-accent/40"
+                               border border-white/5 bg-[#1A2226] p-6
+                               transition-colors duration-200 hover:border-[#A33715]/60"
                   >
                     {/* Info */}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-builder-muted">
+                      <p className="text-xs font-medium text-[#907768]">
                         {item.brand}
                       </p>
-                      <p className="mt-0.5 truncate text-sm font-semibold text-builder-text">
+                      <p className="mt-1 truncate text-sm font-semibold text-[#B5A295]">
                         {item.name}
                       </p>
 
                       {/* Spec badges */}
                       {badges.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
+                        <div className="mt-3 flex flex-wrap gap-2">
                           {badges.map((badge) => (
                             <span
                               key={badge}
-                              className="inline-block rounded-md bg-builder-border/60 px-2
-                                         py-0.5 text-[11px] font-medium text-builder-muted"
+                              className="inline-block rounded-md bg-[#2A3438] px-2.5
+                                         py-1 text-[11px] font-medium text-[#907768]"
                             >
                               {badge}
                             </span>
@@ -224,9 +224,9 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                       </span>
                       <button
                         onClick={() => handleSelect(item)}
-                        className="rounded-lg bg-builder-accent/10 px-4 py-1.5 text-xs
-                                   font-semibold text-builder-accent transition-colors
-                                   hover:bg-builder-accent hover:text-builder-bg"
+                        className="rounded-lg bg-[#A33715] px-4 py-1.5 text-xs
+                                   font-semibold text-white transition-colors
+                                   hover:bg-[#8A2D10]"
                       >
                         Seleccionar
                       </button>

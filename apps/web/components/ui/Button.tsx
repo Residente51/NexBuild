@@ -19,9 +19,9 @@ export function Button({
 
   const variants = {
     primary:
-      "bg-blue-600 text-white hover:bg-blue-500",
+      "bg-[#A33715] text-white hover:bg-[#8A2D10]",
     secondary:
-      "border border-zinc-700 bg-transparent text-white hover:bg-zinc-900",
+      "border border-[#394045] bg-[#20292D] text-white hover:bg-[#2A3438]",
   };
 
   return (

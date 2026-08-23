@@ -3,18 +3,18 @@ import { Button } from "../ui/Button";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-black">
+    <section className="relative overflow-hidden bg-[#0A0F12]">
       {/* Fondo */}
-      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-black to-black" />
+      <div className="absolute inset-0 bg-[#0A0F12]" />
 
       {/* Luces */}
-      <div className="absolute left-1/2 top-32 h-96 w-96 -translate-x-1/2 rounded-full bg-blue-600/20 blur-[140px]" />
-      <div className="absolute right-20 top-52 h-72 w-72 rounded-full bg-cyan-500/10 blur-[120px]" />
+      <div className="absolute left-1/2 top-32 h-96 w-96 -translate-x-1/2 rounded-full bg-[#A33715]/8 blur-[140px]" />
+      <div className="absolute right-20 top-52 h-72 w-72 rounded-full bg-[#A33715]/5 blur-[120px]" />
 
       <div className="relative mx-auto flex min-h-[90vh] max-w-7xl flex-col items-center gap-16 px-6 py-20 lg:flex-row">
         {/* Texto */}
         <div className="flex-1">
-          <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm text-blue-400">
+          <span className="rounded-full border border-[#A33715]/30 bg-[#A33715]/10 px-4 py-2 text-sm text-[#D4A08A]">
             La nueva forma de construir tu PC
           </span>
 
@@ -60,9 +60,9 @@ export function Hero() {
         {/* Vista previa */}
         <div className="flex flex-1 justify-center">
           <div className="relative h-[520px] w-[520px]">
-            <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-[120px]" />
+            <div className="absolute inset-0 rounded-full bg-[#A33715]/10 blur-[120px]" />
 
-            <div className="absolute inset-10 rounded-3xl border border-zinc-800 bg-zinc-900/70 shadow-2xl backdrop-blur-xl">
+            <div className="absolute inset-10 rounded-3xl border border-[#394045] bg-[#20292D] shadow-2xl shadow-black/30">
               <div className="flex h-full items-center justify-center">
                 <div className="text-center">
                   <div className="text-8xl">🖥️</div>

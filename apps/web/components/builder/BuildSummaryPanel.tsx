@@ -136,24 +136,24 @@ export function BuildSummaryPanel({
   return (
     <aside
       id="build-summary-panel"
-      className="sticky top-6 space-y-5"
+      className="sticky top-6 space-y-6"
     >
       {/* Price card */}
-      <div className="rounded-xl border border-builder-border bg-builder-surface p-5 transition-opacity duration-300">
-        <p className="text-xs font-medium tracking-wide text-builder-muted uppercase">
+      <div className="rounded-xl border border-white/5 bg-[#1A2226] p-6">
+        <p className="text-xs font-medium tracking-wide text-[#907768] uppercase">
           Total estimado
         </p>
-        <p className="mt-1 text-3xl font-bold tracking-tight text-builder-text">
+        <p className="mt-3 text-3xl font-bold tracking-tight text-[#B5A295]">
           ${displayPrice.toLocaleString("es-CL")}
         </p>
-        <p className="mt-1 text-xs text-builder-muted">
+        <p className="mt-4 text-xs text-[#907768]">
           Consumo estimado: ~{displayWattage}W
         </p>
       </div>
 
       {/* Compatibility card */}
-      <div className="rounded-xl border border-builder-border bg-builder-surface p-5 transition-opacity duration-300">
-        <p className="mb-3 text-xs font-medium tracking-wide text-builder-muted uppercase">
+      <div className="rounded-xl border border-white/5 bg-[#1A2226] p-6">
+        <p className="mb-4 text-xs font-medium tracking-wide text-[#907768] uppercase">
           Compatibilidad
         </p>
 
@@ -181,7 +181,7 @@ export function BuildSummaryPanel({
                       : "bg-builder-warning"
                   }`}
                 />
-                <span className="text-builder-muted">{issue.message}</span>
+                <span className="text-[#907768]">{issue.message}</span>
               </li>
             ))}
           </ul>
@@ -199,12 +199,12 @@ export function BuildSummaryPanel({
       {displayHasComponents && (
         <button
           onClick={handleCopy}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl border
+          className={`flex w-full items-center justify-center gap-2 rounded-xl
                      px-4 py-2.5 text-sm font-medium transition-colors
                      ${
                        copied
-                         ? "border-builder-success/40 text-builder-success"
-                         : "border-builder-border bg-builder-surface text-builder-text hover:border-builder-accent/40 hover:text-builder-accent"
+                         ? "bg-builder-success/10 text-builder-success"
+                         : "bg-[#A33715] text-white hover:bg-[#8A2D10]"
                      }`}
         >
           {copied ? (
@@ -229,7 +229,7 @@ export function BuildSummaryPanel({
       {displayHasComponents && (
         <button
           onClick={onClearBuild}
-          className="w-full rounded-xl border border-builder-border bg-builder-surface
+          className="w-full rounded-xl border border-[#394045] bg-[#1A2226]
                      px-4 py-2.5 text-sm font-medium text-builder-muted
                      transition-colors hover:border-builder-danger/40
                      hover:text-builder-danger"

@@ -45,14 +45,14 @@ function StorageRow({
 }) {
   return (
     <div
-      className="flex items-center gap-4 rounded-xl border border-builder-border
-                 bg-builder-surface p-4 transition-colors duration-200
-                 hover:border-builder-accent/40"
+      className="group flex items-center gap-4 rounded-xl border border-[#394045]
+                 bg-[#1A2226] p-4 transition-colors duration-200
+                 hover:border-[#A33715]/60"
     >
       {/* Icon */}
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center
-                    rounded-lg bg-builder-border/60"
+                    rounded-lg bg-[#2A3438]"
       >
         <svg
           className="h-5 w-5 text-builder-muted"
@@ -69,10 +69,10 @@ function StorageRow({
 
       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium tracking-wide text-builder-muted uppercase">
+          <p className="text-xs font-medium tracking-wide text-[#907768] uppercase">
             Almacenamiento
           </p>
-          <p className="truncate text-sm font-semibold text-builder-text">
+          <p className="truncate text-sm font-semibold text-[#B5A295]">
             {device.name}
           </p>
         </div>
@@ -126,25 +126,22 @@ export function PCBuilderView() {
     build.storage.length > 0;
 
   return (
-    <section
-      id="pc-builder"
-      className="min-h-screen bg-builder-bg px-4 py-8 sm:px-6 lg:px-8"
-    >
+    <section id="pc-builder" className="mx-auto max-w-7xl">
       {/* Header */}
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-builder-text sm:text-3xl">
-            Arma tu PC
-          </h1>
-          <p className="mt-1 text-sm text-builder-muted">
-            Selecciona tus componentes y verifica la compatibilidad en tiempo real.
-          </p>
-        </div>
+      <div className="mb-8 pl-2">
+        <h1 className="text-3xl font-black tracking-tight text-[#B5A295] sm:text-4xl">
+          Arma tu PC
+        </h1>
+        <p className="mt-3 text-sm text-[#907768]">
+          Selecciona tus componentes y verifica la compatibilidad en tiempo real.
+        </p>
+      </div>
 
-        {/* Two-column grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
-          {/* Left — Slots */}
-          <div className="space-y-3">
+      {/* Bento Grid */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left — Slots (Main Bento Box) */}
+        <div className="col-span-12 rounded-3xl border border-white/5 bg-[#20292D] p-6 shadow-xl shadow-black/40 lg:col-span-8 lg:p-8">
+          <div className="space-y-4">
             {/* Single-slot categories */}
             {SINGLE_SLOTS.map((category) => (
               <SlotRow
@@ -170,9 +167,9 @@ export function PCBuilderView() {
               <button
                 onClick={() => openCatalog("storage")}
                 className="group flex w-full items-center gap-4 rounded-xl border
-                           border-dashed border-builder-border bg-builder-surface/50
+                           border-dashed border-[#394045] bg-[#1A2226]
                            p-4 text-sm text-builder-muted transition-colors
-                           hover:border-builder-accent/40 hover:text-builder-accent"
+                           hover:border-[#A33715] hover:text-[#A33715]"
               >
                 <div
                   className="flex h-11 w-11 shrink-0 items-center justify-center
@@ -196,8 +193,10 @@ export function PCBuilderView() {
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Right — Summary */}
+        {/* Right — Summary (Side Bento Box) */}
+        <div className="col-span-12 rounded-3xl border border-white/5 bg-[#20292D] p-6 shadow-xl shadow-black/40 lg:col-span-4">
           <BuildSummaryPanel
             build={build}
             totalPrice={totalPrice}

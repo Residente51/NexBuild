@@ -46,14 +46,14 @@ export function SlotRow({
   return (
     <div
       id={`slot-${category}`}
-      className="group flex items-center gap-4 rounded-xl border border-builder-border
-                 bg-builder-surface p-4 transition-colors duration-200
-                 hover:border-builder-accent/40"
+      className="group flex items-center gap-4 rounded-xl border border-[#394045]
+                 bg-[#1A2226] p-4 transition-colors duration-200
+                 hover:border-[#A33715]/60"
     >
       {/* Icon */}
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center
-                    rounded-lg bg-builder-border/60"
+                    rounded-lg bg-[#2A3438]"
       >
         <svg
           className="h-5 w-5 text-builder-muted"
@@ -73,10 +73,10 @@ export function SlotRow({
         {component ? (
           <>
             <div className="min-w-0">
-              <p className="text-xs font-medium tracking-wide text-builder-muted uppercase">
+              <p className="text-xs font-medium tracking-wide text-[#907768] uppercase">
                 {label}
               </p>
-              <p className="truncate text-sm font-semibold text-builder-text">
+              <p className="truncate text-sm font-semibold text-[#B5A295]">
                 {component.name}
               </p>
             </div>

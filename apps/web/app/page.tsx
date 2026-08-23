@@ -1,4 +1,3 @@
-import { Navbar } from "../components/layout/Navbar";
 import { Hero } from "../components/sections/Hero";
 
 import { ComponentCard } from "@/components/catalog/ComponentCard";
@@ -9,8 +8,6 @@ export default function Home() {
 
   return (
     <>
-      <Navbar />
-
       <Hero />
 
       <section className="bg-black px-6 py-16">
