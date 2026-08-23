@@ -7,7 +7,7 @@
  * - Copy-to-clipboard build export.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { ComponentCategory } from "@/lib/categories";
 import type {
@@ -110,8 +110,14 @@ export function BuildSummaryPanel({
   onClearBuild,
   hasComponents,
 }: BuildSummaryPanelProps) {
-  const statusCfg = STATUS_CONFIG[report.status];
+  const [isMounted, setIsMounted] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const statusCfg = STATUS_CONFIG[report.status];
 
   const handleCopy = useCallback(async () => {
     const text = generateBuildText(build, totalPrice, report.status);
@@ -120,26 +126,33 @@ export function BuildSummaryPanel({
     setTimeout(() => setCopied(false), 2000);
   }, [build, totalPrice, report.status]);
 
+  // Safe values for initial SSR pass to avoid hydration mismatches
+  const displayPrice = isMounted ? totalPrice : 0;
+  const displayWattage = isMounted ? report.totalWattageEstimated : 0;
+  const displayStatusCfg = isMounted ? statusCfg : STATUS_CONFIG["compatible"];
+  const displayIssues = isMounted ? report.issues : [];
+  const displayHasComponents = isMounted ? hasComponents : false;
+
   return (
     <aside
       id="build-summary-panel"
       className="sticky top-6 space-y-5"
     >
       {/* Price card */}
-      <div className="rounded-xl border border-builder-border bg-builder-surface p-5">
+      <div className="rounded-xl border border-builder-border bg-builder-surface p-5 transition-opacity duration-300">
         <p className="text-xs font-medium tracking-wide text-builder-muted uppercase">
           Total estimado
         </p>
         <p className="mt-1 text-3xl font-bold tracking-tight text-builder-text">
-          ${totalPrice.toLocaleString("es-CL")}
+          ${displayPrice.toLocaleString("es-CL")}
         </p>
         <p className="mt-1 text-xs text-builder-muted">
-          Consumo estimado: ~{report.totalWattageEstimated}W
+          Consumo estimado: ~{displayWattage}W
         </p>
       </div>
 
       {/* Compatibility card */}
-      <div className="rounded-xl border border-builder-border bg-builder-surface p-5">
+      <div className="rounded-xl border border-builder-border bg-builder-surface p-5 transition-opacity duration-300">
         <p className="mb-3 text-xs font-medium tracking-wide text-builder-muted uppercase">
           Compatibilidad
         </p>
@@ -147,16 +160,16 @@ export function BuildSummaryPanel({
         {/* Status badge */}
         <div
           className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5
-                      text-xs font-semibold ${statusCfg.bgClass} ${statusCfg.borderClass}`}
+                      text-xs font-semibold ${displayStatusCfg.bgClass} ${displayStatusCfg.borderClass}`}
         >
-          <span className={`inline-block h-2 w-2 rounded-full ${statusCfg.dotClass}`} />
-          <span className="text-builder-text">{statusCfg.label}</span>
+          <span className={`inline-block h-2 w-2 rounded-full ${displayStatusCfg.dotClass}`} />
+          <span className="text-builder-text">{displayStatusCfg.label}</span>
         </div>
 
         {/* Issues list */}
-        {report.issues.length > 0 && (
+        {displayIssues.length > 0 && (
           <ul className="mt-4 space-y-2.5">
-            {report.issues.map((issue) => (
+            {displayIssues.map((issue) => (
               <li
                 key={issue.code}
                 className="flex items-start gap-2.5 text-xs leading-relaxed"
@@ -175,7 +188,7 @@ export function BuildSummaryPanel({
         )}
 
         {/* Empty state */}
-        {report.issues.length === 0 && hasComponents && (
+        {displayIssues.length === 0 && displayHasComponents && (
           <p className="mt-3 text-xs text-builder-success/80">
             Todos los componentes seleccionados son compatibles entre sí.
           </p>
@@ -183,7 +196,7 @@ export function BuildSummaryPanel({
       </div>
 
       {/* Copy build */}
-      {hasComponents && (
+      {displayHasComponents && (
         <button
           onClick={handleCopy}
           className={`flex w-full items-center justify-center gap-2 rounded-xl border
@@ -213,7 +226,7 @@ export function BuildSummaryPanel({
       )}
 
       {/* Clear build */}
-      {hasComponents && (
+      {displayHasComponents && (
         <button
           onClick={onClearBuild}
           className="w-full rounded-xl border border-builder-border bg-builder-surface

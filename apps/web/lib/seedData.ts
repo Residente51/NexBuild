@@ -25,7 +25,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 export const cpuRyzen7_7700X: CPUComponent = {
-  id: 901,
+  id: "901",
   slug: "amd-ryzen-7-7700x",
   name: "AMD Ryzen 7 7700X",
   brand: "AMD",
@@ -40,7 +40,7 @@ export const cpuRyzen7_7700X: CPUComponent = {
 };
 
 export const cpuIntelI5_13600K: CPUComponent = {
-  id: 902,
+  id: "902",
   slug: "intel-core-i5-13600k",
   name: "Intel Core i5-13600K",
   brand: "Intel",
@@ -59,7 +59,7 @@ export const cpuIntelI5_13600K: CPUComponent = {
 // ---------------------------------------------------------------------------
 
 export const mbMsiB650TomahawkWifi: MotherboardComponent = {
-  id: 903,
+  id: "903",
   slug: "msi-mag-b650-tomahawk-wifi",
   name: "MSI MAG B650 TOMAHAWK WIFI",
   brand: "MSI",
@@ -76,7 +76,7 @@ export const mbMsiB650TomahawkWifi: MotherboardComponent = {
 };
 
 export const mbGigabyteB760mDS3H: MotherboardComponent = {
-  id: 904,
+  id: "904",
   slug: "gigabyte-b760m-ds3h",
   name: "Gigabyte B760M DS3H",
   brand: "Gigabyte",
@@ -97,7 +97,7 @@ export const mbGigabyteB760mDS3H: MotherboardComponent = {
 // ---------------------------------------------------------------------------
 
 export const ramCorsairVengeanceDdr5: RAMComponent = {
-  id: 905,
+  id: "905",
   slug: "corsair-vengeance-ddr5-32gb-5600",
   name: "Corsair Vengeance DDR5 32GB (2x16GB) 5600MHz",
   brand: "Corsair",
@@ -111,7 +111,7 @@ export const ramCorsairVengeanceDdr5: RAMComponent = {
 };
 
 export const ramKingstonFuryDdr4: RAMComponent = {
-  id: 906,
+  id: "906",
   slug: "kingston-fury-beast-ddr4-16gb-3200",
   name: "Kingston FURY Beast DDR4 16GB (2x8GB) 3200MHz",
   brand: "Kingston",
@@ -129,7 +129,7 @@ export const ramKingstonFuryDdr4: RAMComponent = {
 // ---------------------------------------------------------------------------
 
 export const gpuRtx4080Super: GPUComponent = {
-  id: 907,
+  id: "907",
   slug: "msi-geforce-rtx-4080-super-ventus-3x-oc",
   name: "MSI GeForce RTX 4080 SUPER VENTUS 3X OC",
   brand: "MSI",
@@ -143,7 +143,7 @@ export const gpuRtx4080Super: GPUComponent = {
 };
 
 export const gpuRtx4060: GPUComponent = {
-  id: 908,
+  id: "908",
   slug: "gigabyte-geforce-rtx-4060-eagle-oc",
   name: "Gigabyte GeForce RTX 4060 EAGLE OC 8GB",
   brand: "Gigabyte",
@@ -161,7 +161,7 @@ export const gpuRtx4060: GPUComponent = {
 // ---------------------------------------------------------------------------
 
 export const caseNzxtH6Flow: CaseComponent = {
-  id: 909,
+  id: "909",
   slug: "nzxt-h6-flow",
   name: "NZXT H6 Flow",
   brand: "NZXT",
@@ -177,7 +177,7 @@ export const caseNzxtH6Flow: CaseComponent = {
 };
 
 export const caseFractalTerra: CaseComponent = {
-  id: 910,
+  id: "910",
   slug: "fractal-design-terra",
   name: "Fractal Design Terra",
   brand: "Fractal Design",
@@ -197,7 +197,7 @@ export const caseFractalTerra: CaseComponent = {
 // ---------------------------------------------------------------------------
 
 export const psuCorsairRM850x: PSUComponent = {
-  id: 911,
+  id: "911",
   slug: "corsair-rm850x-2024",
   name: "Corsair RM850x (2024)",
   brand: "Corsair",
@@ -210,7 +210,7 @@ export const psuCorsairRM850x: PSUComponent = {
 };
 
 export const psuEvga450BR: PSUComponent = {
-  id: 912,
+  id: "912",
   slug: "evga-450-br",
   name: "EVGA 450 BR",
   brand: "EVGA",
@@ -227,7 +227,7 @@ export const psuEvga450BR: PSUComponent = {
 // ---------------------------------------------------------------------------
 
 export const storageNvme: StorageComponent = {
-  id: 913,
+  id: "913",
   slug: "kingston-nv2-1tb",
   name: "Kingston NV2 1TB PCIe 4.0 NVMe M.2",
   brand: "Kingston",
@@ -241,7 +241,7 @@ export const storageNvme: StorageComponent = {
 };
 
 export const storageSata: StorageComponent = {
-  id: 914,
+  id: "914",
   slug: "crucial-bx500-1tb",
   name: "Crucial BX500 1TB SATA III",
   brand: "Crucial",
@@ -259,7 +259,7 @@ export const storageSata: StorageComponent = {
 // ---------------------------------------------------------------------------
 
 export const coolerAir: CoolerComponent = {
-  id: 915,
+  id: "915",
   slug: "noctua-nh-d15",
   name: "Noctua NH-D15",
   brand: "Noctua",
@@ -273,7 +273,7 @@ export const coolerAir: CoolerComponent = {
 };
 
 export const coolerAio: CoolerComponent = {
-  id: 916,
+  id: "916",
   slug: "nzxt-kraken-240",
   name: "NZXT Kraken 240",
   brand: "NZXT",

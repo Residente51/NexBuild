@@ -1,0 +1,339 @@
+{
+  "cpus": [
+    {
+      "id": "cpu-1",
+      "name": "AMD Ryzen 5 5600X",
+      "brand": "AMD",
+      "socket": "AM4",
+      "price": 130000,
+      "powerDrawW": 65
+    },
+    {
+      "id": "cpu-2",
+      "name": "AMD Ryzen 7 5800X3D",
+      "brand": "AMD",
+      "socket": "AM4",
+      "price": 280000,
+      "powerDrawW": 105
+    },
+    {
+      "id": "cpu-3",
+      "name": "AMD Ryzen 5 7600X",
+      "brand": "AMD",
+      "socket": "AM5",
+      "price": 220000,
+      "powerDrawW": 105
+    },
+    {
+      "id": "cpu-4",
+      "name": "AMD Ryzen 7 7800X3D",
+      "brand": "AMD",
+      "socket": "AM5",
+      "price": 380000,
+      "powerDrawW": 120
+    },
+    {
+      "id": "cpu-5",
+      "name": "AMD Ryzen 9 7950X",
+      "brand": "AMD",
+      "socket": "AM5",
+      "price": 550000,
+      "powerDrawW": 170
+    },
+    {
+      "id": "cpu-6",
+      "name": "Intel Core i5-12400F",
+      "brand": "Intel",
+      "socket": "LGA1700",
+      "price": 140000,
+      "powerDrawW": 65
+    },
+    {
+      "id": "cpu-7",
+      "name": "Intel Core i5-13600K",
+      "brand": "Intel",
+      "socket": "LGA1700",
+      "price": 280000,
+      "powerDrawW": 125
+    },
+    {
+      "id": "cpu-8",
+      "name": "Intel Core i7-13700K",
+      "brand": "Intel",
+      "socket": "LGA1700",
+      "price": 380000,
+      "powerDrawW": 125
+    },
+    {
+      "id": "cpu-9",
+      "name": "Intel Core i5-14600K",
+      "brand": "Intel",
+      "socket": "LGA1700",
+      "price": 310000,
+      "powerDrawW": 125
+    },
+    {
+      "id": "cpu-10",
+      "name": "Intel Core i9-14900K",
+      "brand": "Intel",
+      "socket": "LGA1700",
+      "price": 580000,
+      "powerDrawW": 125
+    }
+  ],
+  "motherboards": [
+    {
+      "id": "mb-1",
+      "name": "MSI MAG B550 TOMAHAWK",
+      "brand": "MSI",
+      "socket": "AM4",
+      "price": 150000,
+      "formFactor": "ATX"
+    },
+    {
+      "id": "mb-2",
+      "name": "Gigabyte B450M DS3H",
+      "brand": "Gigabyte",
+      "socket": "AM4",
+      "price": 70000,
+      "formFactor": "Micro-ATX"
+    },
+    {
+      "id": "mb-3",
+      "name": "ASUS TUF GAMING X570-PLUS",
+      "brand": "ASUS",
+      "socket": "AM4",
+      "price": 180000,
+      "formFactor": "ATX"
+    },
+    {
+      "id": "mb-4",
+      "name": "Gigabyte B650 AORUS ELITE AX",
+      "brand": "Gigabyte",
+      "socket": "AM5",
+      "price": 210000,
+      "formFactor": "ATX"
+    },
+    {
+      "id": "mb-5",
+      "name": "MSI PRO B650M-A WIFI",
+      "brand": "MSI",
+      "socket": "AM5",
+      "price": 160000,
+      "formFactor": "Micro-ATX"
+    },
+    {
+      "id": "mb-6",
+      "name": "ASUS ROG STRIX X670E-F GAMING WIFI",
+      "brand": "ASUS",
+      "socket": "AM5",
+      "price": 400000,
+      "formFactor": "ATX"
+    },
+    {
+      "id": "mb-7",
+      "name": "MSI PRO B760-P WIFI DDR4",
+      "brand": "MSI",
+      "socket": "LGA1700",
+      "price": 140000,
+      "formFactor": "ATX"
+    },
+    {
+      "id": "mb-8",
+      "name": "ASUS PRIME H610M-E D4",
+      "brand": "ASUS",
+      "socket": "LGA1700",
+      "price": 80000,
+      "formFactor": "Micro-ATX"
+    },
+    {
+      "id": "mb-9",
+      "name": "Gigabyte Z790 AORUS ELITE AX",
+      "brand": "Gigabyte",
+      "socket": "LGA1700",
+      "price": 260000,
+      "formFactor": "ATX"
+    },
+    {
+      "id": "mb-10",
+      "name": "MSI MAG Z790 TOMAHAWK WIFI",
+      "brand": "MSI",
+      "socket": "LGA1700",
+      "price": 280000,
+      "formFactor": "ATX"
+    }
+  ],
+  "gpus": [
+    {
+      "id": "gpu-1",
+      "name": "MSI GeForce RTX 4060 VENTUS 2X",
+      "brand": "MSI",
+      "powerDrawW": 115,
+      "memory": "8GB",
+      "price": 320000
+    },
+    {
+      "id": "gpu-2",
+      "name": "Gigabyte GeForce RTX 4070 SUPER WINDFORCE OC",
+      "brand": "Gigabyte",
+      "powerDrawW": 220,
+      "memory": "12GB",
+      "price": 650000
+    },
+    {
+      "id": "gpu-3",
+      "name": "ASUS TUF Gaming GeForce RTX 4080 SUPER",
+      "brand": "ASUS",
+      "powerDrawW": 320,
+      "memory": "16GB",
+      "price": 1150000
+    },
+    {
+      "id": "gpu-4",
+      "name": "Sapphire PULSE AMD Radeon RX 7600",
+      "brand": "Sapphire",
+      "powerDrawW": 165,
+      "memory": "8GB",
+      "price": 290000
+    },
+    {
+      "id": "gpu-5",
+      "name": "XFX Speedster QICK 319 Radeon RX 7800 XT",
+      "brand": "XFX",
+      "powerDrawW": 263,
+      "memory": "16GB",
+      "price": 540000
+    }
+  ],
+  "ram": [
+    {
+      "id": "ram-1",
+      "name": "Corsair Vengeance LPX 16GB (2x8GB) DDR4 3200MHz",
+      "brand": "Corsair",
+      "type": "ddr4",
+      "speed": 3200,
+      "capacity": "16GB (2x8GB)",
+      "price": 45000
+    },
+    {
+      "id": "ram-2",
+      "name": "Kingston FURY Beast 32GB (2x16GB) DDR4 3200MHz",
+      "brand": "Kingston",
+      "type": "ddr4",
+      "speed": 3200,
+      "capacity": "32GB (2x16GB)",
+      "price": 85000
+    },
+    {
+      "id": "ram-3",
+      "name": "G.Skill Trident Z5 RGB 32GB (2x16GB) DDR5 6000MHz",
+      "brand": "G.Skill",
+      "type": "ddr5",
+      "speed": 6000,
+      "capacity": "32GB (2x16GB)",
+      "price": 135000
+    },
+    {
+      "id": "ram-4",
+      "name": "Corsair Vengeance 32GB (2x16GB) DDR5 5600MHz",
+      "brand": "Corsair",
+      "type": "ddr5",
+      "speed": 5600,
+      "capacity": "32GB (2x16GB)",
+      "price": 115000
+    },
+    {
+      "id": "ram-5",
+      "name": "TeamGroup T-Force Delta RGB 32GB (2x16GB) DDR5 6000MHz",
+      "brand": "TeamGroup",
+      "type": "ddr5",
+      "speed": 6000,
+      "capacity": "32GB (2x16GB)",
+      "price": 125000
+    }
+  ],
+  "psus": [
+    {
+      "id": "psu-1",
+      "name": "Corsair RM750e",
+      "brand": "Corsair",
+      "wattage": 750,
+      "certification": "80+ Gold",
+      "price": 115000
+    },
+    {
+      "id": "psu-2",
+      "name": "EVGA 600 W1",
+      "brand": "EVGA",
+      "wattage": 600,
+      "certification": "80+ White",
+      "price": 55000
+    },
+    {
+      "id": "psu-3",
+      "name": "Seasonic Focus GX-850",
+      "brand": "Seasonic",
+      "wattage": 850,
+      "certification": "80+ Gold",
+      "price": 145000
+    },
+    {
+      "id": "psu-4",
+      "name": "ASUS ROG Thor 1000W Platinum II",
+      "brand": "ASUS",
+      "wattage": 1000,
+      "certification": "80+ Platinum",
+      "price": 280000
+    },
+    {
+      "id": "psu-5",
+      "name": "Gigabyte P650B",
+      "brand": "Gigabyte",
+      "wattage": 650,
+      "certification": "80+ Bronze",
+      "price": 65000
+    }
+  ],
+  "storage": [
+    {
+      "id": "storage-1",
+      "name": "Kingston NV2 1TB",
+      "brand": "Kingston",
+      "type": "nvme",
+      "capacity": "1TB",
+      "price": 55000
+    },
+    {
+      "id": "storage-2",
+      "name": "Samsung 980 PRO 1TB",
+      "brand": "Samsung",
+      "type": "nvme",
+      "capacity": "1TB",
+      "price": 95000
+    },
+    {
+      "id": "storage-3",
+      "name": "WD Black SN850X 2TB",
+      "brand": "Western Digital",
+      "type": "nvme",
+      "capacity": "2TB",
+      "price": 180000
+    },
+    {
+      "id": "storage-4",
+      "name": "Crucial BX500 1TB",
+      "brand": "Crucial",
+      "type": "ssd",
+      "capacity": "1TB",
+      "price": 45000
+    },
+    {
+      "id": "storage-5",
+      "name": "Seagate BarraCuda 2TB",
+      "brand": "Seagate",
+      "type": "hdd",
+      "capacity": "2TB",
+      "price": 55000
+    }
+  ]
+}

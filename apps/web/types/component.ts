@@ -5,7 +5,7 @@
 import type { ComponentCategory } from "@/lib/categories";
 
 export interface BaseComponent {
-  id: number;
+  id: string;
   /**
    * Permanent URL identifier, prefixed with the brand.
    * Never regenerate it from `name` — display names may change,

@@ -10,7 +10,7 @@
 import { useEffect, useCallback } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
-import { mockCatalog } from "@/lib/seedData";
+import { mockCatalog } from "@/data/catalog";
 import type { BuildSelection, PCComponent, StorageComponent } from "@/types/component";
 
 // ---------------------------------------------------------------------------

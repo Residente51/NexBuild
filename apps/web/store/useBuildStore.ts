@@ -33,7 +33,7 @@ interface BuildActions {
   /** Add a storage device to the build. */
   addStorage: (device: StorageComponent) => void;
   /** Remove a storage device by id. */
-  removeStorage: (deviceId: number) => void;
+  removeStorage: (deviceId: string) => void;
 
   /** Reset the entire build to its initial empty state. */
   clearBuild: () => void;
