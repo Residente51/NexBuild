@@ -148,11 +148,11 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
       <div
         id="catalog-modal-panel"
         className="relative flex max-h-[85vh] w-full max-w-2xl flex-col
-                   overflow-hidden rounded-2xl border border-white/5
-                   bg-[#20292D] shadow-xl shadow-black/40"
+                   overflow-hidden rounded-2xl border border-white/10
+                   bg-[#191923] shadow-xl shadow-black/30"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#394045] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>
             <h2 className="text-lg font-bold text-builder-text">
               Elegir {categoryLabel}
@@ -189,15 +189,15 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                   <div
                     key={item.id}
                     className="group flex items-center justify-between gap-4 rounded-xl
-                               border border-white/5 bg-[#1A2226] p-6
-                               transition-colors duration-200 hover:border-[#A33715]/60"
+                               border border-white/10 bg-white/5 p-6
+                               transition-colors duration-200 hover:border-[#0E79B2]/40"
                   >
                     {/* Info */}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-[#907768]">
+                      <p className="text-xs font-medium text-white/60">
                         {item.brand}
                       </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-[#B5A295]">
+                      <p className="mt-1 truncate text-sm font-semibold text-[#FBFEF9]">
                         {item.name}
                       </p>
 
@@ -207,8 +207,8 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                           {badges.map((badge) => (
                             <span
                               key={badge}
-                              className="inline-block rounded-md bg-[#2A3438] px-2.5
-                                         py-1 text-[11px] font-medium text-[#907768]"
+                              className="inline-block rounded-md bg-white/5 px-2.5
+                                         py-1 text-[11px] font-medium text-white/60"
                             >
                               {badge}
                             </span>
@@ -219,14 +219,14 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
 
                     {/* Price + action */}
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="text-sm font-bold text-builder-accent">
+                      <span className="text-sm font-bold text-[#0E79B2]">
                         ${item.price.toLocaleString("es-CL")}
                       </span>
                       <button
                         onClick={() => handleSelect(item)}
-                        className="rounded-lg bg-[#A33715] px-4 py-1.5 text-xs
-                                   font-semibold text-white transition-colors
-                                   hover:bg-[#8A2D10]"
+                        className="rounded-lg bg-[#0E79B2] px-4 py-1.5 text-xs
+                                   font-semibold text-[#FBFEF9] transition-colors
+                                   hover:bg-[#0A5C87]"
                       >
                         Seleccionar
                       </button>

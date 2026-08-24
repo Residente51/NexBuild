@@ -139,21 +139,21 @@ export function BuildSummaryPanel({
       className="sticky top-6 space-y-6"
     >
       {/* Price card */}
-      <div className="rounded-xl border border-white/5 bg-[#1A2226] p-6">
-        <p className="text-xs font-medium tracking-wide text-[#907768] uppercase">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+        <p className="text-xs font-medium tracking-wide text-white/60 uppercase">
           Total estimado
         </p>
-        <p className="mt-3 text-3xl font-bold tracking-tight text-[#B5A295]">
+        <p className="mt-3 text-3xl font-bold tracking-tight text-[#FBFEF9]">
           ${displayPrice.toLocaleString("es-CL")}
         </p>
-        <p className="mt-4 text-xs text-[#907768]">
+        <p className="mt-4 text-xs text-white/60">
           Consumo estimado: ~{displayWattage}W
         </p>
       </div>
 
       {/* Compatibility card */}
-      <div className="rounded-xl border border-white/5 bg-[#1A2226] p-6">
-        <p className="mb-4 text-xs font-medium tracking-wide text-[#907768] uppercase">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+        <p className="mb-4 text-xs font-medium tracking-wide text-white/60 uppercase">
           Compatibilidad
         </p>
 
@@ -181,7 +181,7 @@ export function BuildSummaryPanel({
                       : "bg-builder-warning"
                   }`}
                 />
-                <span className="text-[#907768]">{issue.message}</span>
+                <span className="text-white/60">{issue.message}</span>
               </li>
             ))}
           </ul>
@@ -204,7 +204,7 @@ export function BuildSummaryPanel({
                      ${
                        copied
                          ? "bg-builder-success/10 text-builder-success"
-                         : "bg-[#A33715] text-white hover:bg-[#8A2D10]"
+                         : "bg-[#0E79B2] text-[#FBFEF9] hover:bg-[#0A5C87]"
                      }`}
         >
           {copied ? (
@@ -229,8 +229,8 @@ export function BuildSummaryPanel({
       {displayHasComponents && (
         <button
           onClick={onClearBuild}
-          className="w-full rounded-xl border border-[#394045] bg-[#1A2226]
-                     px-4 py-2.5 text-sm font-medium text-builder-muted
+          className="w-full rounded-xl border border-white/10 bg-white/5
+                     px-4 py-2.5 text-sm font-medium text-white/60
                      transition-colors hover:border-builder-danger/40
                      hover:text-builder-danger"
         >

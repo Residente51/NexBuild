@@ -45,14 +45,14 @@ function StorageRow({
 }) {
   return (
     <div
-      className="group flex items-center gap-4 rounded-xl border border-[#394045]
-                 bg-[#1A2226] p-4 transition-colors duration-200
-                 hover:border-[#A33715]/60"
+      className="group flex items-center gap-4 rounded-xl border border-white/10
+                 bg-white/5 p-4 transition-colors duration-200
+                 hover:border-[#0E79B2]/40"
     >
       {/* Icon */}
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center
-                    rounded-lg bg-[#2A3438]"
+                    rounded-lg bg-white/5"
       >
         <svg
           className="h-5 w-5 text-builder-muted"
@@ -69,15 +69,15 @@ function StorageRow({
 
       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium tracking-wide text-[#907768] uppercase">
+          <p className="text-xs font-medium tracking-wide text-white/60 uppercase">
             Almacenamiento
           </p>
-          <p className="truncate text-sm font-semibold text-[#B5A295]">
+          <p className="truncate text-sm font-semibold text-[#FBFEF9]">
             {device.name}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <span className="text-sm font-semibold text-builder-accent">
+          <span className="text-sm font-semibold text-[#0E79B2]">
             ${device.price.toLocaleString("es-CL")}
           </span>
           <button
@@ -129,10 +129,10 @@ export function PCBuilderView() {
     <section id="pc-builder" className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-8 pl-2">
-        <h1 className="text-3xl font-black tracking-tight text-[#B5A295] sm:text-4xl">
+        <h1 className="text-3xl font-black tracking-tight text-[#FBFEF9] sm:text-4xl">
           Arma tu PC
         </h1>
-        <p className="mt-3 text-sm text-[#907768]">
+        <p className="mt-3 text-sm text-white/60">
           Selecciona tus componentes y verifica la compatibilidad en tiempo real.
         </p>
       </div>
@@ -140,7 +140,7 @@ export function PCBuilderView() {
       {/* Bento Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left — Slots (Main Bento Box) */}
-        <div className="col-span-12 rounded-3xl border border-white/5 bg-[#20292D] p-6 shadow-xl shadow-black/40 lg:col-span-8 lg:p-8">
+        <div className="col-span-12 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/20 lg:col-span-8 lg:p-8">
           <div className="space-y-4">
             {/* Single-slot categories */}
             {SINGLE_SLOTS.map((category) => (
@@ -167,13 +167,13 @@ export function PCBuilderView() {
               <button
                 onClick={() => openCatalog("storage")}
                 className="group flex w-full items-center gap-4 rounded-xl border
-                           border-dashed border-[#394045] bg-[#1A2226]
-                           p-4 text-sm text-builder-muted transition-colors
-                           hover:border-[#A33715] hover:text-[#A33715]"
+                           border-dashed border-white/10 bg-white/[0.03]
+                           p-4 text-sm text-white/60 transition-colors
+                           hover:border-[#0E79B2] hover:text-[#0E79B2]"
               >
                 <div
                   className="flex h-11 w-11 shrink-0 items-center justify-center
-                              rounded-lg bg-builder-border/40"
+                              rounded-lg bg-white/5"
                 >
                   <svg
                     className="h-5 w-5"
@@ -196,7 +196,7 @@ export function PCBuilderView() {
         </div>
 
         {/* Right — Summary (Side Bento Box) */}
-        <div className="col-span-12 rounded-3xl border border-white/5 bg-[#20292D] p-6 shadow-xl shadow-black/40 lg:col-span-4">
+        <div className="col-span-12 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/20 lg:col-span-4">
           <BuildSummaryPanel
             build={build}
             totalPrice={totalPrice}

@@ -11,16 +11,16 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Builder design tokens — Wabi-Sabi Industrial */
-  --color-builder-bg: #0A0F12;
-  --color-builder-surface: #20292D;
-  --color-builder-border: #394045;
-  --color-builder-text: #E0E4E8;
-  --color-builder-muted: #7A8389;
-  --color-builder-accent: #A33715;
-  --color-builder-success: #4A8C5C;
-  --color-builder-warning: #B8862D;
-  --color-builder-danger: #C44B3F;
+  /* Builder design tokens — Clean Tech */
+  --color-builder-bg: #191923;
+  --color-builder-surface: rgba(255, 255, 255, 0.05);
+  --color-builder-border: rgba(255, 255, 255, 0.1);
+  --color-builder-text: #FBFEF9;
+  --color-builder-muted: rgba(255, 255, 255, 0.6);
+  --color-builder-accent: #0E79B2;
+  --color-builder-success: #34D399;
+  --color-builder-warning: #FBBF24;
+  --color-builder-danger: #F87171;
 }
 
 @media (prefers-color-scheme: dark) {
