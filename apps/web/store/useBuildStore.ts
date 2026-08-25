@@ -10,6 +10,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { evaluateBuild } from "@/lib/compatibility/engine";
+import { supabase } from "../lib/supabaseClient";
 import type {
   BuildSelection,
   BuildCompatibilityReport,
@@ -37,11 +38,17 @@ interface BuildActions {
 
   /** Reset the entire build to its initial empty state. */
   clearBuild: () => void;
+  
+  /** Load an entire build from data */
+  loadBuild: (build: BuildSelection) => void;
 
   /** Run the compatibility engine against the current build. */
   getCompatibilityReport: () => BuildCompatibilityReport;
   /** Sum of all selected components' prices (CLP). */
   getTotalPrice: () => number;
+  
+  /** Save the current build to Supabase and return the generated ID */
+  saveBuildToCloud: () => Promise<string | null>;
 }
 
 interface BuildState {
@@ -105,6 +112,8 @@ export const useBuildStore = create<BuildStore>()(
   clearBuild: () =>
     set({ build: { ...EMPTY_BUILD, storage: [] } }),
 
+  loadBuild: (build) => set({ build }),
+
   // -- Derived state (computed on demand) ------------------------------------
 
   getCompatibilityReport: () => evaluateBuild(get().build),
@@ -126,6 +135,23 @@ export const useBuildStore = create<BuildStore>()(
     }
 
     return total;
+  },
+
+  saveBuildToCloud: async () => {
+    const { build, getTotalPrice } = get();
+    const totalPrice = getTotalPrice();
+    
+    const { data, error } = await supabase
+      .from("saved_builds")
+      .insert({ build_data: build, total_price: totalPrice })
+      .select("id")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data?.id || null;
   },
     }),
     {
