@@ -7,10 +7,10 @@
  * and dispatches the selection to the Zustand store.
  */
 
-import { useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
-import { mockCatalog } from "@/data/catalog";
+import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import type { BuildSelection, PCComponent, StorageComponent } from "@/types/component";
 
 // ---------------------------------------------------------------------------
@@ -95,6 +95,9 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   const setComponent = useBuildStore((s) => s.setComponent);
   const addStorage = useBuildStore((s) => s.addStorage);
 
+  const [catalog, setCatalog] = useState<PCComponent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
   // Close on Escape
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -107,17 +110,26 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
     if (isOpen) {
       document.addEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "hidden";
+      
+      // Fetch data from Supabase if not loaded yet
+      if (catalog.length === 0) {
+        setIsLoading(true);
+        fetchCatalogFromSupabase().then((data) => {
+          setCatalog(data);
+          setIsLoading(false);
+        });
+      }
     }
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, handleKeyDown, catalog.length]);
 
   if (!isOpen || !category) return null;
 
   // Filter catalog by active category
-  const filtered = mockCatalog.filter((item) => item.category === category);
+  const filtered = catalog.filter((item) => item.category === category);
   const categoryLabel =
     CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? category;
 
@@ -175,7 +187,13 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
 
         {/* Product list */}
         <div className="flex-1 overflow-y-auto p-6">
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-sm font-medium text-builder-text">
+                Cargando componentes desde la nube...
+              </p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex h-40 items-center justify-center">
               <p className="text-sm text-builder-muted">
                 No hay componentes disponibles para esta categoría.
