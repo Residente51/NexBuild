@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { mockCatalog } from "@/data/catalog";
+import { useState, useEffect, useMemo } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
+import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import { CATEGORY_LABELS, ComponentCategory } from "@/lib/categories";
 import type { PCComponent, StorageComponent } from "@/types/component";
 
@@ -18,7 +18,7 @@ function formatSpecs(component: PCComponent): string {
     case "motherboard":
       return `Socket: ${s.socket} | Factor: ${s.formFactor}`;
     case "gpu":
-      return `Largo: ${s.length}mm | Fuente: ${s.recommendedPsuWattage}W`;
+      return `Largo: ${s.length}mm | PSU Rec: ${s.recommendedPsuWattage}W`;
     case "ram":
       return `${String(s.ramType).toUpperCase()} | ${s.modules}x${s.capacityPerModule}GB`;
     case "storage":
@@ -35,12 +35,24 @@ function formatSpecs(component: PCComponent): string {
 }
 
 export default function ComponentsPage() {
+  const [catalog, setCatalog] = useState<PCComponent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<FilterCategory>("all");
   const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
 
   const setComponent = useBuildStore((state) => state.setComponent);
   const addStorage = useBuildStore((state) => state.addStorage);
+
+  useEffect(() => {
+    async function loadCatalog() {
+      setIsLoading(true);
+      const data = await fetchCatalogFromSupabase();
+      setCatalog(data);
+      setIsLoading(false);
+    }
+    loadCatalog();
+  }, []);
 
   const categories: { id: FilterCategory; label: string }[] = [
     { id: "all", label: "Todos" },
@@ -51,7 +63,7 @@ export default function ComponentsPage() {
   ];
 
   const filteredCatalog = useMemo(() => {
-    return mockCatalog.filter((item) => {
+    return catalog.filter((item) => {
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.brand.toLowerCase().includes(searchQuery.toLowerCase());
@@ -59,13 +71,13 @@ export default function ComponentsPage() {
         activeCategory === "all" || item.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, activeCategory]);
+  }, [catalog, searchQuery, activeCategory]);
 
   const handleAdd = (item: PCComponent) => {
     if (item.category === "storage") {
       addStorage(item as StorageComponent);
     } else {
-      setComponent(item.category, item);
+      setComponent(item.category as any, item);
     }
 
     setAddedItems((prev) => ({ ...prev, [item.id]: true }));
@@ -75,15 +87,15 @@ export default function ComponentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] px-4 py-8 md:py-12">
-      <div className="container mx-auto max-w-6xl">
+    <div className="min-h-screen bg-[#191923] px-4 py-8 md:py-12">
+      <div className="container mx-auto max-w-7xl">
         <header className="mb-8 space-y-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-[#FBFEF9] md:text-4xl">
               Catálogo de Componentes
             </h1>
             <p className="mt-2 text-white/60">
-              Explora y selecciona las piezas para tu próxima build.
+              Explora y selecciona las piezas perfectas para armar tu equipo ideal.
             </p>
           </div>
 
@@ -108,11 +120,11 @@ export default function ComponentsPage() {
                 placeholder="Buscar componente o marca..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-4 text-sm text-[#FBFEF9] placeholder:text-white/40 focus:border-[#0E79B2] focus:outline-none focus:ring-1 focus:ring-[#0E79B2] transition-colors"
+                className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-4 text-sm text-[#FBFEF9] placeholder:text-white/40 transition-colors focus:border-[#0E79B2] focus:outline-none focus:ring-1 focus:ring-[#0E79B2]"
               />
             </div>
 
-            {/* Category Filters (Scrollable horizontally on mobile) */}
+            {/* Category Filters */}
             <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
               {categories.map((cat) => (
                 <button
@@ -131,20 +143,27 @@ export default function ComponentsPage() {
           </div>
         </header>
 
-        {/* Component Grid */}
-        {filteredCatalog.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Content Area */}
+        {isLoading ? (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#0E79B2] border-t-transparent"></div>
+            <p className="mt-4 text-sm font-medium text-white/60">
+              Cargando componentes desde la nube...
+            </p>
+          </div>
+        ) : filteredCatalog.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredCatalog.map((item) => (
               <div
                 key={item.id}
-                className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-5 transition-all hover:border-[#0E79B2]/50 hover:bg-zinc-800/50"
+                className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[#0E79B2]/50 hover:shadow-lg hover:shadow-black/20"
               >
                 <div>
                   <div className="mb-3 flex items-start justify-between">
-                    <span className="inline-block rounded bg-white/10 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-white/60">
+                    <span className="inline-block rounded-md bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/60">
                       {CATEGORY_LABELS[item.category]}
                     </span>
-                    <span className="text-xs font-semibold text-[#0E79B2]">
+                    <span className="text-xs font-semibold text-white/40">
                       {item.brand}
                     </span>
                   </div>
@@ -157,29 +176,29 @@ export default function ComponentsPage() {
                 </div>
                 
                 <div className="mt-6 flex items-center justify-between">
-                  <span className="text-lg font-bold text-[#FBFEF9]">
-                    ${item.price.toLocaleString("es-CL")}
+                  <span className="text-lg font-bold text-[#0E79B2]">
+                    ${item.price?.toLocaleString("es-CL") || "0"}
                   </span>
                   
                   <button
                     onClick={() => handleAdd(item)}
                     disabled={addedItems[item.id]}
-                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${
                       addedItems[item.id]
-                        ? "bg-builder-success/20 text-builder-success"
-                        : "bg-[#0E79B2]/10 text-[#0E79B2] hover:bg-[#0E79B2]/20"
+                        ? "bg-[#34D399]/20 text-[#34D399]"
+                        : "bg-[#0E79B2] text-[#FBFEF9] hover:bg-[#0A5C87]"
                     }`}
                   >
                     {addedItems[item.id] ? (
                       <>
-                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                         </svg>
                         Añadido
                       </>
                     ) : (
                       <>
-                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
                         Añadir
@@ -191,13 +210,14 @@ export default function ComponentsPage() {
             ))}
           </div>
         ) : (
-          <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-zinc-800/50 bg-zinc-900/30">
-            <div className="text-center">
-              <p className="text-lg font-medium text-[#FBFEF9]">No se encontraron componentes</p>
-              <p className="mt-1 text-sm text-white/50">
-                Intenta con otra búsqueda o categoría.
-              </p>
-            </div>
+          <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <svg className="h-12 w-12 text-white/20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <p className="text-lg font-medium text-[#FBFEF9]">No se encontraron resultados</p>
+            <p className="mt-1 text-sm text-white/50">
+              Intenta ajustando los filtros o tu búsqueda.
+            </p>
           </div>
         )}
       </div>
