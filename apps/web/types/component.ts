@@ -17,6 +17,7 @@ export interface BaseComponent {
   category: ComponentCategory;
   price: number;
   image?: string;
+  description?: string;
 }
 
 export interface CPUComponent extends BaseComponent {
