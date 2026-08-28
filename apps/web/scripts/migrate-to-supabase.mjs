@@ -36,7 +36,7 @@ async function migrate() {
     const storeName = storeSlug === 'spdigital' ? 'SP Digital' : 'PC Factory';
     
     // Buscar la tienda por nombre en lugar de slug
-    const { data: existingStore, error: searchError } = await supabase
+    const { data: existingStore } = await supabase
       .from('stores')
       .select('id')
       .eq('name', storeName)

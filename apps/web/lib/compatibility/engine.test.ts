@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { evaluateBuild } from "@/lib/compatibility/engine";
 import {
   cpuRyzen7_7700X,
-  cpuIntelI5_13600K,
   mbMsiB650TomahawkWifi,
   mbGigabyteB760mDS3H,
   ramCorsairVengeanceDdr5,

@@ -16,7 +16,6 @@ import type {
   CompatibilityStatus,
   CPUComponent,
   GPUComponent,
-  PSUComponent,
 } from "@/types/component";
 
 // ---------------------------------------------------------------------------

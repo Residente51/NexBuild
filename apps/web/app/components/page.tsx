@@ -1,66 +1,85 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { useBuildStore } from "@/store/useBuildStore";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import { CATEGORY_LABELS, ComponentCategory } from "@/lib/categories";
-import type { PCComponent, StorageComponent } from "@/types/component";
+import type { PCComponent, StorageComponent, BuildSelection } from "@/types/component";
 
 type FilterCategory = "all" | ComponentCategory;
 
 function formatSpecs(component: PCComponent): string[] {
   if (!component.specs) return [];
-  const s = component.specs as any;
-  
+
   switch (component.category) {
-    case "cpu":
+    case "cpu": {
+      const { specs } = component;
       return [
-        s.cores ? `${s.cores} Núcleos` : "",
-        `Socket ${s.socket}`,
-        `${s.tdp}W`,
+        specs?.cores ? `${specs.cores} Núcleos` : "",
+        specs?.socket ? `Socket ${specs.socket}` : "",
+        specs?.tdp ? `${specs.tdp}W` : "",
       ].filter(Boolean);
-    case "motherboard":
+    }
+    case "motherboard": {
+      const { specs } = component;
       return [
-        `Socket ${s.socket}`,
-        String(s.formFactor).toUpperCase(),
-        s.chipset,
+        specs?.socket ? `Socket ${specs.socket}` : "",
+        specs?.formFactor ? String(specs.formFactor).toUpperCase() : "",
+        specs?.chipset ?? "",
       ].filter(Boolean);
-    case "gpu":
+    }
+    case "gpu": {
+      const { specs } = component;
       return [
-        s.vram ? `${s.vram}GB ${s.memoryType || ""}` : "",
-        `Largo: ${s.length}mm`,
-        `PSU Rec: ${s.recommendedPsuWattage}W`,
+        specs?.vram ? `${specs.vram}GB ${specs.memoryType || ""}` : "",
+        specs?.length ? `Largo: ${specs.length}mm` : "",
+        specs?.recommendedPsuWattage ? `PSU Rec: ${specs.recommendedPsuWattage}W` : "",
       ].filter(Boolean);
-    case "ram":
+    }
+    case "ram": {
+      const { specs } = component;
       return [
-        String(s.ramType).toUpperCase(),
-        `${s.modules}x${s.capacityPerModule}GB`,
-        s.speed ? `${s.speed} MHz` : "",
+        specs?.ramType ? String(specs.ramType).toUpperCase() : "",
+        specs?.modules && specs?.capacityPerModule ? `${specs.modules}x${specs.capacityPerModule}GB` : "",
+        specs?.speed ? `${specs.speed} MHz` : "",
       ].filter(Boolean);
-    case "storage":
+    }
+    case "storage": {
+      const { specs } = component;
       return [
-        String(s.type).toUpperCase(),
-        s.capacity ? `${s.capacity >= 1000 ? s.capacity / 1000 + "TB" : s.capacity + "GB"}` : "",
-        s.readSpeed ? `${s.readSpeed} MB/s` : "",
+        specs?.type ? String(specs.type).toUpperCase() : "",
+        specs?.capacity ? `${specs.capacity >= 1000 ? (specs.capacity / 1000).toFixed(1) + "TB" : specs.capacity + "GB"}` : "",
+        specs?.readSpeed ? `${specs.readSpeed} MB/s` : "",
       ].filter(Boolean);
-    case "psu":
+    }
+    case "psu": {
+      const { specs } = component;
       return [
-        `${s.wattage}W`,
-        String(s.formFactor).toUpperCase(),
-        s.certification,
+        specs?.wattage ? `${specs.wattage}W` : "",
+        specs?.formFactor ? String(specs.formFactor).toUpperCase() : "",
+        specs?.certification ?? "",
       ].filter(Boolean);
-    case "case":
-      return [`Max GPU: ${s.maxGpuLength}mm`];
-    case "cooler":
-      return [`${s.type === "air" ? "Aire" : "Líquida"}`];
+    }
+    case "case": {
+      const { specs } = component;
+      return specs?.maxGpuLength ? [`Max GPU: ${specs.maxGpuLength}mm`] : [];
+    }
+    case "cooler": {
+      const { specs } = component;
+      return specs?.type ? [`${specs.type === "air" ? "Aire" : "Líquida"}`] : [];
+    }
     default:
       return [];
   }
 }
 
+type CatalogPageState = "loading" | "ready" | "empty" | "error";
+
 export default function ComponentsPage() {
   const [catalog, setCatalog] = useState<PCComponent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<CatalogPageState>("loading");
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<FilterCategory>("all");
   const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
@@ -69,15 +88,23 @@ export default function ComponentsPage() {
   const setComponent = useBuildStore((state) => state.setComponent);
   const addStorage = useBuildStore((state) => state.addStorage);
 
-  useEffect(() => {
-    async function loadCatalog() {
-      setIsLoading(true);
-      const data = await fetchCatalogFromSupabase();
-      setCatalog(data);
-      setIsLoading(false);
+  const loadCatalog = useCallback(async () => {
+    setState("loading");
+    setError(null);
+    const result = await fetchCatalogFromSupabase();
+    if (result.success) {
+      setCatalog(result.data);
+      setState(result.data.length === 0 ? "empty" : "ready");
+    } else {
+      console.error("Error loading catalog:", result.error);
+      setError(result.error);
+      setState("error");
     }
-    loadCatalog();
   }, []);
+
+  useEffect(() => {
+    Promise.resolve().then(() => loadCatalog());
+  }, [loadCatalog]);
 
   const categories: { id: FilterCategory; label: string }[] = [
     { id: "all", label: "Todos" },
@@ -102,7 +129,7 @@ export default function ComponentsPage() {
     if (item.category === "storage") {
       addStorage(item as StorageComponent);
     } else {
-      setComponent(item.category as any, item);
+      setComponent(item.category as Exclude<keyof BuildSelection, "storage">, item);
     }
 
     setAddedItems((prev) => ({ ...prev, [item.id]: true }));
@@ -169,17 +196,52 @@ export default function ComponentsPage() {
         </header>
 
         {/* Content Area */}
-        {isLoading ? (
+        {state === "loading" && (
           <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#0E79B2] border-t-transparent"></div>
             <p className="mt-4 text-sm font-medium text-white/60">
               Cargando componentes desde la nube...
             </p>
           </div>
-        ) : filteredCatalog.length > 0 ? (
+        )}
+        {state === "error" && (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/5">
+            <svg className="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="text-center">
+              <p className="text-sm font-medium text-white/60">
+                Error al cargar componentes
+              </p>
+              {error && (
+                <p className="mt-2 text-xs text-white/40">
+                  {error}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => loadCatalog()}
+              className="rounded-xl bg-[#0E79B2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0A5C87]"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+        {state === "empty" && (
+          <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <svg className="h-12 w-12 text-white/20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.325 15.581l-5.85-5.85m0 0l-7.07-7.07m7.07 7.07l7.07 7.07m-7.07-7.07l-7.07 7.07" />
+            </svg>
+            <p className="text-lg font-medium text-[#FBFEF9]">No se encontraron componentes</p>
+            <p className="mt-1 text-sm text-white/50">
+              El catálogo está vacío.
+            </p>
+          </div>
+        )}
+        {state === "ready" && filteredCatalog.length > 0 && (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredCatalog.map((item) => {
-              const image = (item as any).image_url || item.image;
+              const image = item.image;
               const specs = formatSpecs(item);
               
               return (
@@ -191,10 +253,13 @@ export default function ComponentsPage() {
                     {/* Image Container */}
                     <div className="mb-4 h-36 w-full rounded-xl bg-white/5 flex flex-col items-center justify-center overflow-hidden border border-white/5">
                       {image && !imgErrors[item.id] ? (
-                        <img 
-                          src={image} 
-                          alt={item.name} 
-                          className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-105" 
+                        <Image
+                          src={image}
+                          alt={item.name}
+                          width={144}
+                          height={144}
+                          unoptimized
+                          className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
                           onError={() => setImgErrors(prev => ({ ...prev, [item.id]: true }))}
                         />
                       ) : (
@@ -274,7 +339,8 @@ export default function ComponentsPage() {
               );
             })}
           </div>
-        ) : (
+        )}
+        {state === "ready" && filteredCatalog.length === 0 && (
           <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/5">
             <svg className="h-12 w-12 text-white/20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />

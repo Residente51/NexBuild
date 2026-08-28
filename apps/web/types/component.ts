@@ -27,6 +27,7 @@ export interface CPUComponent extends BaseComponent {
     tdp: number;
     hasIntegratedGraphics: boolean;
     includesCooler: boolean;
+    cores?: number;
   };
 }
 
@@ -39,6 +40,7 @@ export interface MotherboardComponent extends BaseComponent {
     ramSlots: number;
     m2Slots: number;
     sataPorts: number;
+    chipset?: string;
   };
 }
 
@@ -48,6 +50,7 @@ export interface RAMComponent extends BaseComponent {
     ramType: "ddr4" | "ddr5";
     modules: number;
     capacityPerModule: number;
+    speed?: number;
   };
 }
 
@@ -57,6 +60,8 @@ export interface GPUComponent extends BaseComponent {
     length: number;
     slotWidth: number;
     recommendedPsuWattage: number;
+    vram?: number;
+    memoryType?: string;
   };
 }
 
@@ -66,6 +71,7 @@ export interface StorageComponent extends BaseComponent {
     type: "nvme" | "sata";
     formFactor: "m.2 2280" | "2.5" | "3.5";
     capacity: number;
+    readSpeed?: number;
   };
 }
 
@@ -74,6 +80,7 @@ export interface PSUComponent extends BaseComponent {
   specs?: {
     wattage: number;
     formFactor: "atx" | "sfx" | "sfx-l";
+    certification?: string;
   };
 }
 

@@ -7,7 +7,7 @@
  * - Copy-to-clipboard build export.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { useBuildStore } from "@/store/useBuildStore";
 import type { ComponentCategory } from "@/lib/categories";
@@ -111,16 +111,11 @@ export function BuildSummaryPanel({
   onClearBuild,
   hasComponents,
 }: BuildSummaryPanelProps) {
-  const [isMounted, setIsMounted] = useState(false);
   const [copied, setCopied] = useState(false);
-  
+
   const saveBuildToCloud = useBuildStore((state) => state.saveBuildToCloud);
   const [isSaving, setIsSaving] = useState(false);
   const [savedUrlCopied, setSavedUrlCopied] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const statusCfg = STATUS_CONFIG[report.status];
 
@@ -149,13 +144,6 @@ export function BuildSummaryPanel({
     }
   };
 
-  // Safe values for initial SSR pass to avoid hydration mismatches
-  const displayPrice = isMounted ? totalPrice : 0;
-  const displayWattage = isMounted ? report.totalWattageEstimated : 0;
-  const displayStatusCfg = isMounted ? statusCfg : STATUS_CONFIG["compatible"];
-  const displayIssues = isMounted ? report.issues : [];
-  const displayHasComponents = isMounted ? hasComponents : false;
-
   return (
     <aside
       id="build-summary-panel"
@@ -167,10 +155,10 @@ export function BuildSummaryPanel({
           Total estimado
         </p>
         <p className="mt-3 text-3xl font-bold tracking-tight text-[#FBFEF9]">
-          ${displayPrice.toLocaleString("es-CL")}
+          ${totalPrice.toLocaleString("es-CL")}
         </p>
         <p className="mt-4 text-xs text-white/60">
-          Consumo estimado: ~{displayWattage}W
+          Consumo estimado: ~{report.totalWattageEstimated}W
         </p>
       </div>
 
@@ -183,16 +171,16 @@ export function BuildSummaryPanel({
         {/* Status badge */}
         <div
           className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5
-                      text-xs font-semibold ${displayStatusCfg.bgClass} ${displayStatusCfg.borderClass}`}
+                      text-xs font-semibold ${statusCfg.bgClass} ${statusCfg.borderClass}`}
         >
-          <span className={`inline-block h-2 w-2 rounded-full ${displayStatusCfg.dotClass}`} />
-          <span className="text-builder-text">{displayStatusCfg.label}</span>
+          <span className={`inline-block h-2 w-2 rounded-full ${statusCfg.dotClass}`} />
+          <span className="text-builder-text">{statusCfg.label}</span>
         </div>
 
         {/* Issues list */}
-        {displayIssues.length > 0 && (
+        {report.issues.length > 0 && (
           <ul className="mt-4 space-y-2.5">
-            {displayIssues.map((issue) => (
+            {report.issues.map((issue) => (
               <li
                 key={issue.code}
                 className="flex items-start gap-2.5 text-xs leading-relaxed"
@@ -211,7 +199,7 @@ export function BuildSummaryPanel({
         )}
 
         {/* Empty state */}
-        {displayIssues.length === 0 && displayHasComponents && (
+        {report.issues.length === 0 && hasComponents && (
           <p className="mt-3 text-xs text-builder-success/80">
             Todos los componentes seleccionados son compatibles entre sí.
           </p>
@@ -219,7 +207,7 @@ export function BuildSummaryPanel({
       </div>
 
       {/* Copy build */}
-      {displayHasComponents && (
+      {hasComponents && (
         <button
           onClick={handleCopy}
           className={`flex w-full items-center justify-center gap-2 rounded-xl
@@ -249,7 +237,7 @@ export function BuildSummaryPanel({
       )}
 
       {/* Save to cloud */}
-      {displayHasComponents && (
+      {hasComponents && (
         <button
           onClick={handleSaveToCloud}
           disabled={isSaving}
@@ -288,7 +276,7 @@ export function BuildSummaryPanel({
       )}
 
       {/* Clear build */}
-      {displayHasComponents && (
+      {hasComponents && (
         <button
           onClick={onClearBuild}
           className="w-full rounded-xl border border-white/10 bg-white/5

@@ -7,7 +7,7 @@
  * and dispatches the selection to the Zustand store.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
@@ -91,12 +91,15 @@ interface CatalogModalProps {
   category: keyof BuildSelection | null;
 }
 
+type CatalogState = "idle" | "loading" | "ready" | "empty" | "error";
+
 export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   const setComponent = useBuildStore((s) => s.setComponent);
   const addStorage = useBuildStore((s) => s.addStorage);
 
   const [catalog, setCatalog] = useState<PCComponent[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, setState] = useState<CatalogState>("idle");
+  const hasAttemptedRef = useRef(false);
 
   // Close on Escape
   const handleKeyDown = useCallback(
@@ -106,25 +109,38 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
     [onClose],
   );
 
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-      
-      // Fetch data from Supabase if not loaded yet
-      if (catalog.length === 0) {
-        setIsLoading(true);
-        fetchCatalogFromSupabase().then((data) => {
-          setCatalog(data);
-          setIsLoading(false);
-        });
-      }
+  const fetchCatalog = useCallback(async () => {
+    setState("loading");
+    const result = await fetchCatalogFromSupabase();
+
+    if (result.success) {
+      setCatalog(result.data);
+      setState(result.data.length === 0 ? "empty" : "ready");
+    } else {
+      console.error("Error fetching catalog:", result.error);
+      setState("error");
     }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+
+    // Only fetch once per session
+    if (!hasAttemptedRef.current) {
+      hasAttemptedRef.current = true;
+      fetchCatalog();
+    }
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [isOpen, handleKeyDown, catalog.length]);
+  }, [isOpen, handleKeyDown, fetchCatalog]);
 
   if (!isOpen || !category) return null;
 
@@ -187,19 +203,41 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
 
         {/* Product list */}
         <div className="flex-1 overflow-y-auto p-6">
-          {isLoading ? (
+          {state === "loading" && (
             <div className="flex h-40 items-center justify-center">
               <p className="text-sm font-medium text-builder-text">
                 Cargando componentes desde la nube...
               </p>
             </div>
-          ) : filtered.length === 0 ? (
+          )}
+          {state === "empty" && (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-sm text-builder-muted">
+                No hay componentes disponibles.
+              </p>
+            </div>
+          )}
+          {state === "error" && (
+            <div className="flex h-40 flex-col items-center justify-center gap-3">
+              <p className="text-sm text-builder-muted">
+                Error al cargar componentes.
+              </p>
+              <button
+                onClick={() => fetchCatalog()}
+                className="rounded-md bg-[#0E79B2] px-3 py-1.5 text-xs font-medium text-[#FBFEF9] transition-colors hover:bg-[#0A5C87]"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+          {state === "ready" && filtered.length === 0 && (
             <div className="flex h-40 items-center justify-center">
               <p className="text-sm text-builder-muted">
                 No hay componentes disponibles para esta categoría.
               </p>
             </div>
-          ) : (
+          )}
+          {state === "ready" && filtered.length > 0 && (
             <div className="space-y-4">
               {filtered.map((item) => {
                 const badges = getSpecBadges(item);
