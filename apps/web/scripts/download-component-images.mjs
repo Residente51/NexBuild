@@ -70,25 +70,92 @@ function generateFallbackSvg(brand, category, name) {
 </svg>`;
 }
 
+// Magic bytes signatures for image formats
+const MAGIC_BYTES = {
+  png: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+  jpeg: Buffer.from([0xff, 0xd8, 0xff]),
+  webp: Buffer.from([0x52, 0x49, 0x46, 0x46]),
+  gif: Buffer.from([0x47, 0x49, 0x46]),
+};
+
+const SIZE_LIMIT = 5 * 1024 * 1024; // 5MB
+const TIMEOUT_MS = 8000; // 8 seconds
+
+function validateImageMagicBytes(buffer) {
+  if (!buffer || buffer.length < 4) return false;
+
+  // Check PNG
+  if (buffer.slice(0, 4).equals(MAGIC_BYTES.png)) return true;
+
+  // Check JPEG
+  if (buffer.slice(0, 3).equals(MAGIC_BYTES.jpeg)) return true;
+
+  // Check WebP (RIFF...WEBP)
+  if (buffer.slice(0, 4).equals(MAGIC_BYTES.webp) &&
+      buffer.slice(8, 12).toString() === 'WEBP') return true;
+
+  // Check GIF
+  if (buffer.slice(0, 3).equals(MAGIC_BYTES.gif)) return true;
+
+  // Reject HTML/XML/text
+  const textStart = buffer.slice(0, 10).toString('utf8').toLowerCase();
+  if (textStart.includes('<!') || textStart.includes('<?')) return false;
+
+  return false;
+}
+
 async function downloadImage(url) {
   try {
-    // 3. Cabeceras estrictas de navegador
+    // 1. Restrict to HTTPS only
+    if (!url.startsWith('https://')) {
+      throw new Error('Only HTTPS URLs are allowed');
+    }
+
+    // 2. Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    // 3. Fetch with strict headers and size validation
     const response = await fetch(url, {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
         'Referer': 'https://www.google.com/'
       }
     });
-    
+
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
+    // 4. Validate Content-Length header
+    const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+    if (contentLength > SIZE_LIMIT) {
+      throw new Error(`File exceeds 5MB limit (${contentLength} bytes)`);
+    }
+
+    // 5. Read buffer and validate size
     const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (buffer.length > SIZE_LIMIT) {
+      throw new Error(`Downloaded file exceeds 5MB limit (${buffer.length} bytes)`);
+    }
+
+    // 6. Validate magic bytes (cryptographic file signature)
+    if (!validateImageMagicBytes(buffer)) {
+      throw new Error('Invalid image format detected (magic bytes validation failed)');
+    }
+
+    return buffer;
   } catch (error) {
-    console.error(`⚠️ Error al descargar ${url.substring(0, 60)}...:`, error.message);
+    const errorMsg = error.name === 'AbortError'
+      ? 'Download timeout (>8s)'
+      : error.message;
+    console.error(`⚠️ Error al descargar ${url.substring(0, 60)}...: ${errorMsg}`);
     return null;
   }
 }
