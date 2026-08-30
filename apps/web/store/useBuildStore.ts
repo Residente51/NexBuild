@@ -10,7 +10,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { evaluateBuild } from "@/lib/compatibility/engine";
-import { supabase } from "../lib/supabaseClient";
+import { saveBuild } from "@/app/actions/saveBuild";
 import type {
   BuildSelection,
   BuildCompatibilityReport,
@@ -47,7 +47,7 @@ interface BuildActions {
   /** Sum of all selected components' prices (CLP). */
   getTotalPrice: () => number;
   
-  /** Save the current build to Supabase and return the generated ID */
+  /** Save the current build via Server Action and return the generated ID */
   saveBuildToCloud: () => Promise<string | null>;
 }
 
@@ -138,20 +138,28 @@ export const useBuildStore = create<BuildStore>()(
   },
 
   saveBuildToCloud: async () => {
-    const { build, getTotalPrice } = get();
-    const totalPrice = getTotalPrice();
-    
-    const { data, error } = await supabase
-      .from("saved_builds")
-      .insert({ build_data: build, total_price: totalPrice })
-      .select("id")
-      .single();
+    const { build } = get();
 
-    if (error) {
-      throw error;
+    // Extract component IDs to send to Server Action
+    const componentIds: Record<string, string | string[] | undefined> = {
+      cpu: build.cpu?.id,
+      motherboard: build.motherboard?.id,
+      ram: build.ram?.id,
+      gpu: build.gpu?.id,
+      case: build.case?.id,
+      cooler: build.cooler?.id,
+      psu: build.psu?.id,
+      storage: build.storage.map((s) => s.id),
+    };
+
+    // Call Server Action (recalculates price server-side)
+    const result = await saveBuild(componentIds);
+
+    if ("error" in result) {
+      throw new Error(result.error);
     }
 
-    return data?.id || null;
+    return result.id;
   },
     }),
     {

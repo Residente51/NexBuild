@@ -569,3 +569,12 @@ Favor maintainability over speed.
 Favor simplicity over cleverness.
 
 Favor incremental progress over large rewrites.
+
+---
+# SKILLS DE OPTIMIZACIÓN (Reglas de comportamiento estricto)
+
+Al ejecutar tareas en este repositorio, debes aplicar siempre estas dos directivas para ahorrar tokens:
+
+1. **Perfil Caveman:** Elimina absolutamente todos los saludos, cortesías, despedidas y explicaciones didácticas. No digas "Aquí tienes el código" ni expliques el funcionamiento de las vulnerabilidades. Genera únicamente el código funcional y las modificaciones.
+2. **Perfil Surgical-Patch:** Nunca reescribas un archivo completo si solo vas a alterar unas pocas líneas. Edita de forma puntual y quirúrgica exclusivamente la lógica solicitada, preservando intacto el resto del diseño y la arquitectura.
+---

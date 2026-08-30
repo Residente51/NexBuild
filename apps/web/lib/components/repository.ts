@@ -1,55 +1,66 @@
 /**
  * Component repository.
  *
- * The single entry point for component data. Everything else reads
- * components through this module, so replacing data/components.ts with
- * an API or a database stays confined to this file.
- *
- * Synchronous for now. Keep it out of Client Components so it can
- * become async without restructuring its callers.
+ * Supabase is the single source of truth for component data.
+ * All reads go through this module, ensuring consistency and
+ * making it easy to swap implementations without affecting callers.
  */
 
-import { components } from "@/data/components";
 import type { PCComponent } from "@/types/component";
 import { supabase } from "../supabaseClient";
 
-import { filterComponents } from "./search";
+export type CatalogResult =
+  | { success: true; data: PCComponent[] }
+  | { success: false; error: string };
 
-export function getAllComponents(): PCComponent[] {
-  return components;
+interface SupabaseProduct {
+  id: string;
+  slug: string;
+  name: string;
+  brand: string;
+  category: string;
+  specs: Record<string, unknown>;
+  image_url?: string;
+  store_listings?: Array<{ price_cash: number; product_url: string }>;
 }
 
-export function getComponentBySlug(slug: string): PCComponent | undefined {
-  return components.find((component) => component.slug === slug);
-}
+export async function fetchCatalogFromSupabase(): Promise<CatalogResult> {
+  try {
+    // Explicit column selection instead of select('*') for type safety and performance
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, slug, name, brand, category, specs, image_url, store_listings(price_cash, product_url)');
 
-export function searchComponents(query: string): PCComponent[] {
-  return filterComponents(components, query);
-}
+    if (error) {
+      console.error("Error fetching catalog from Supabase:", error);
+      return { success: false, error: error.message || "Error desconocido al cargar el catálogo" };
+    }
 
-export async function fetchCatalogFromSupabase(): Promise<PCComponent[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*, store_listings(price_cash, product_url)');
+    if (!data) {
+      return { success: false, error: "No se recibieron datos del servidor" };
+    }
 
-  if (error || !data) {
-    console.error("Error fetching catalog from Supabase:", error);
-    return [];
+    const mapped = (data as SupabaseProduct[]).map((item) => {
+      const listing = item.store_listings?.[0];
+      const price = listing?.price_cash ?? 0;
+
+      // Type-safe mapping with explicit validation
+      return {
+        id: item.id,
+        slug: item.slug,
+        name: item.name,
+        brand: item.brand,
+        category: item.category,
+        price,
+        specs: item.specs,
+        image: item.image_url,
+      } as PCComponent;
+    });
+
+    return { success: true, data: mapped };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error desconocido";
+    console.error("Exception fetching catalog:", message);
+    return { success: false, error: message };
   }
-
-  return data.map((item: any) => {
-    const listing = item.store_listings?.[0];
-    const price = listing?.price_cash ?? 0;
-
-    return {
-      id: item.id,
-      slug: item.slug,
-      name: item.name,
-      brand: item.brand,
-      category: item.category,
-      price: price,
-      specs: item.specs,
-      image_url: item.image_url,
-    } as PCComponent;
-  });
 }

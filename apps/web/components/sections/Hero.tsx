@@ -1,7 +1,52 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "../ui/Button";
+import { fetchCatalogFromSupabase } from "@/lib/components/repository";
+
+type CatalogState = "loading" | "ready" | "empty" | "error";
 
 export function Hero() {
+  const [state, setState] = useState<CatalogState>("loading");
+  const [componentCount, setComponentCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadCatalogStats = async () => {
+      setState("loading");
+      setError(null);
+      const result = await fetchCatalogFromSupabase();
+
+      if (result.success) {
+        setComponentCount(result.data.length);
+        setState(result.data.length === 0 ? "empty" : "ready");
+      } else {
+        console.error("Error loading catalog stats:", result.error);
+        setError(result.error);
+        setState("error");
+      }
+    };
+
+    loadCatalogStats();
+  }, []);
+
+  const handleRetry = () => {
+    setState("loading");
+    setError(null);
+    const loadCatalogStats = async () => {
+      const result = await fetchCatalogFromSupabase();
+      if (result.success) {
+        setComponentCount(result.data.length);
+        setState(result.data.length === 0 ? "empty" : "ready");
+      } else {
+        setError(result.error);
+        setState("error");
+      }
+    };
+    loadCatalogStats();
+  };
+
   return (
     <section className="relative overflow-hidden bg-[#191923]">
       {/* Fondo */}
@@ -34,26 +79,61 @@ export function Hero() {
               </Button>
             </Link>
 
-            <Button variant="secondary">
-              Explorar componentes
-            </Button>
+            <Link href="/components">
+              <Button variant="secondary">
+                Explorar componentes
+              </Button>
+            </Link>
           </div>
 
+          {/* Catálogo Stats - desde Supabase */}
           <div className="mt-16 grid grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-3xl font-bold text-[#FBFEF9]">15K+</h3>
-              <p className="text-white/60">Componentes</p>
-            </div>
+            {state === "loading" && (
+              <div className="col-span-3">
+                <p className="text-sm text-white/40">Cargando catálogo...</p>
+              </div>
+            )}
 
-            <div>
-              <h3 className="text-3xl font-bold text-[#FBFEF9]">100%</h3>
-              <p className="text-white/60">Compatibilidad</p>
-            </div>
+            {state === "error" && (
+              <div className="col-span-3">
+                <p className="text-sm text-red-400">{error}</p>
+                <button
+                  onClick={handleRetry}
+                  className="mt-2 text-xs text-[#0E79B2] hover:underline"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
 
-            <div>
-              <h3 className="text-3xl font-bold text-[#FBFEF9]">24/7</h3>
-              <p className="text-white/60">Precios actualizados</p>
-            </div>
+            {state === "empty" && (
+              <div className="col-span-3">
+                <p className="text-sm text-white/40">
+                  El catálogo está siendo poblado
+                </p>
+              </div>
+            )}
+
+            {state === "ready" && (
+              <>
+                <div>
+                  <h3 className="text-3xl font-bold text-[#FBFEF9]">
+                    {componentCount}+
+                  </h3>
+                  <p className="text-white/60">Componentes en vivo</p>
+                </div>
+
+                <div>
+                  <h3 className="text-3xl font-bold text-[#FBFEF9]">100%</h3>
+                  <p className="text-white/60">Compatibilidad</p>
+                </div>
+
+                <div>
+                  <h3 className="text-3xl font-bold text-[#FBFEF9]">24/7</h3>
+                  <p className="text-white/60">Precios actualizados</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

@@ -3,11 +3,11 @@
 /**
  * Catalog modal for selecting a component in the PC Builder.
  *
- * Shows a filtered view of `mockCatalog` based on the active category,
+ * Fetches catalog from Supabase, filters by active category,
  * and dispatches the selection to the Zustand store.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
@@ -19,7 +19,7 @@ import type { BuildSelection, PCComponent, StorageComponent } from "@/types/comp
 
 function getSpecBadges(item: PCComponent): string[] {
   const badges: string[] = [];
-  if (!("specs" in item) || !item.specs) return badges;
+  if (!item.specs) return badges;
 
   switch (item.category) {
     case "cpu": {
@@ -91,12 +91,15 @@ interface CatalogModalProps {
   category: keyof BuildSelection | null;
 }
 
+type CatalogState = "idle" | "loading" | "ready" | "empty" | "error";
+
 export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   const setComponent = useBuildStore((s) => s.setComponent);
   const addStorage = useBuildStore((s) => s.addStorage);
 
   const [catalog, setCatalog] = useState<PCComponent[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, setState] = useState<CatalogState>("idle");
+  const hasAttemptedRef = useRef(false);
 
   // Close on Escape
   const handleKeyDown = useCallback(
@@ -106,32 +109,59 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
     [onClose],
   );
 
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-      
-      // Fetch data from Supabase if not loaded yet
-      if (catalog.length === 0) {
-        setIsLoading(true);
-        fetchCatalogFromSupabase().then((data) => {
-          setCatalog(data);
-          setIsLoading(false);
-        });
-      }
+  const fetchCatalog = useCallback(async () => {
+    setState("loading");
+    const result = await fetchCatalogFromSupabase();
+
+    if (result.success) {
+      setCatalog(result.data);
+      setState(result.data.length === 0 ? "empty" : "ready");
+    } else {
+      console.error("Error fetching catalog:", result.error);
+      setState("error");
     }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+
+    // Only fetch once per session
+    if (!hasAttemptedRef.current) {
+      hasAttemptedRef.current = true;
+      fetchCatalog();
+    }
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [isOpen, handleKeyDown, catalog.length]);
-
-  if (!isOpen || !category) return null;
+  }, [isOpen, handleKeyDown, fetchCatalog]);
 
   // Filter catalog by active category
-  const filtered = catalog.filter((item) => item.category === category);
-  const categoryLabel =
-    CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? category;
+  const filtered = useMemo(() => {
+    if (!category) return [];
+    return catalog.filter((item) => item.category === category);
+  }, [catalog, category]);
+
+  const categoryLabel = useMemo(() => {
+    return category && category in CATEGORY_LABELS
+      ? CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]
+      : String(category);
+  }, [category]);
+
+  const filteredWithBadges = useMemo(() => {
+    return filtered.map((item) => ({
+      item,
+      badges: getSpecBadges(item),
+    }));
+  }, [filtered]);
+
+  if (!isOpen || !category) return null;
 
   function handleSelect(item: PCComponent) {
     if (category === "storage") {
@@ -187,22 +217,43 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
 
         {/* Product list */}
         <div className="flex-1 overflow-y-auto p-6">
-          {isLoading ? (
+          {state === "loading" && (
             <div className="flex h-40 items-center justify-center">
               <p className="text-sm font-medium text-builder-text">
                 Cargando componentes desde la nube...
               </p>
             </div>
-          ) : filtered.length === 0 ? (
+          )}
+          {state === "empty" && (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-sm text-builder-muted">
+                No hay componentes disponibles.
+              </p>
+            </div>
+          )}
+          {state === "error" && (
+            <div className="flex h-40 flex-col items-center justify-center gap-3">
+              <p className="text-sm text-builder-muted">
+                Error al cargar componentes.
+              </p>
+              <button
+                onClick={() => fetchCatalog()}
+                className="rounded-md bg-[#0E79B2] px-3 py-1.5 text-xs font-medium text-[#FBFEF9] transition-colors hover:bg-[#0A5C87]"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+          {state === "ready" && filtered.length === 0 && (
             <div className="flex h-40 items-center justify-center">
               <p className="text-sm text-builder-muted">
                 No hay componentes disponibles para esta categoría.
               </p>
             </div>
-          ) : (
+          )}
+          {state === "ready" && filtered.length > 0 && (
             <div className="space-y-4">
-              {filtered.map((item) => {
-                const badges = getSpecBadges(item);
+              {filteredWithBadges.map(({ item, badges }) => {
                 return (
                   <div
                     key={item.id}

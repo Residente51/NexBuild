@@ -159,8 +159,7 @@ try {
 
 
   // 4. Generar string con código TypeScript
-  // Usamos 'as any as PCComponent[]' porque 'id' en JSON es string pero la interfaz requiere number,
-  // y porque agregamos campos extra en specs (brand, powerDrawW) que la interfaz no tiene formalmente.
+  // Usamos 'as PCComponent[]' para saltar la validación estricta al inyectar campos mapeados del JSON.
   const tsContent = `import type { PCComponent } from "@/types/component";
 
 export const mockCatalog: PCComponent[] = ${JSON.stringify(catalog, null, 2)} as PCComponent[];
