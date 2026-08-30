@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useBuildStore } from "@/store/useBuildStore";
+import type { BuildStore } from "@/store/useBuildStore";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import { CATEGORY_LABELS, ComponentCategory } from "@/lib/categories";
 import type { PCComponent, StorageComponent, BuildSelection } from "@/types/component";
 
 type FilterCategory = "all" | ComponentCategory;
+
+const selectBuildActions = (state: BuildStore) => ({
+  setComponent: state.setComponent,
+  addStorage: state.addStorage,
+});
 
 function formatSpecs(component: PCComponent): string[] {
   if (!component.specs) return [];
@@ -84,11 +90,11 @@ export default function ComponentsPage() {
   const [activeCategory, setActiveCategory] = useState<FilterCategory>("all");
   const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const hasInitialized = useRef(false);
 
-  const setComponent = useBuildStore((state) => state.setComponent);
-  const addStorage = useBuildStore((state) => state.addStorage);
+  const { setComponent, addStorage } = useBuildStore(selectBuildActions);
 
-  const loadCatalog = useCallback(async () => {
+  const handleLoadCatalog = useCallback(async () => {
     setState("loading");
     setError(null);
     const result = await fetchCatalogFromSupabase();
@@ -103,8 +109,25 @@ export default function ComponentsPage() {
   }, []);
 
   useEffect(() => {
-    Promise.resolve().then(() => loadCatalog());
-  }, [loadCatalog]);
+    const load = async () => {
+      setState("loading");
+      setError(null);
+      const result = await fetchCatalogFromSupabase();
+      if (result.success) {
+        setCatalog(result.data);
+        setState(result.data.length === 0 ? "empty" : "ready");
+      } else {
+        console.error("Error loading catalog:", result.error);
+        setError(result.error);
+        setState("error");
+      }
+    };
+
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      load();
+    }
+  }, []);
 
   const categories: { id: FilterCategory; label: string }[] = [
     { id: "all", label: "Todos" },
@@ -125,7 +148,14 @@ export default function ComponentsPage() {
     });
   }, [catalog, searchQuery, activeCategory]);
 
-  const handleAdd = (item: PCComponent) => {
+  const itemsWithSpecs = useMemo(() => {
+    return filteredCatalog.map((item) => ({
+      item,
+      specs: formatSpecs(item),
+    }));
+  }, [filteredCatalog]);
+
+  const handleAdd = useCallback((item: PCComponent) => {
     if (item.category === "storage") {
       addStorage(item as StorageComponent);
     } else {
@@ -136,7 +166,7 @@ export default function ComponentsPage() {
     setTimeout(() => {
       setAddedItems((prev) => ({ ...prev, [item.id]: false }));
     }, 2000);
-  };
+  }, [setComponent, addStorage]);
 
   return (
     <div className="min-h-screen bg-[#191923] px-4 py-8 md:py-12">
@@ -220,7 +250,7 @@ export default function ComponentsPage() {
               )}
             </div>
             <button
-              onClick={() => loadCatalog()}
+              onClick={() => handleLoadCatalog()}
               className="rounded-xl bg-[#0E79B2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0A5C87]"
             >
               Reintentar
@@ -240,10 +270,9 @@ export default function ComponentsPage() {
         )}
         {state === "ready" && filteredCatalog.length > 0 && (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredCatalog.map((item) => {
+            {itemsWithSpecs.map(({ item, specs }) => {
               const image = item.image;
-              const specs = formatSpecs(item);
-              
+
               return (
                 <div
                   key={item.id}

@@ -3,11 +3,11 @@
 /**
  * Catalog modal for selecting a component in the PC Builder.
  *
- * Shows a filtered view of `mockCatalog` based on the active category,
+ * Fetches catalog from Supabase, filters by active category,
  * and dispatches the selection to the Zustand store.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
@@ -19,7 +19,7 @@ import type { BuildSelection, PCComponent, StorageComponent } from "@/types/comp
 
 function getSpecBadges(item: PCComponent): string[] {
   const badges: string[] = [];
-  if (!("specs" in item) || !item.specs) return badges;
+  if (!item.specs) return badges;
 
   switch (item.category) {
     case "cpu": {
@@ -142,12 +142,26 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
     };
   }, [isOpen, handleKeyDown, fetchCatalog]);
 
-  if (!isOpen || !category) return null;
-
   // Filter catalog by active category
-  const filtered = catalog.filter((item) => item.category === category);
-  const categoryLabel =
-    CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? category;
+  const filtered = useMemo(() => {
+    if (!category) return [];
+    return catalog.filter((item) => item.category === category);
+  }, [catalog, category]);
+
+  const categoryLabel = useMemo(() => {
+    return category && category in CATEGORY_LABELS
+      ? CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]
+      : String(category);
+  }, [category]);
+
+  const filteredWithBadges = useMemo(() => {
+    return filtered.map((item) => ({
+      item,
+      badges: getSpecBadges(item),
+    }));
+  }, [filtered]);
+
+  if (!isOpen || !category) return null;
 
   function handleSelect(item: PCComponent) {
     if (category === "storage") {
@@ -239,8 +253,7 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
           )}
           {state === "ready" && filtered.length > 0 && (
             <div className="space-y-4">
-              {filtered.map((item) => {
-                const badges = getSpecBadges(item);
+              {filteredWithBadges.map(({ item, badges }) => {
                 return (
                   <div
                     key={item.id}

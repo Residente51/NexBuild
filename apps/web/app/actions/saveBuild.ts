@@ -1,15 +1,25 @@
 "use server";
 
-import { components } from "@/data/components";
 import { supabase } from "@/lib/supabaseClient";
 import type { BuildSelection, PCComponent } from "@/types/component";
+
+interface SupabaseProduct {
+  id: string;
+  slug: string;
+  name: string;
+  brand: string;
+  category: string;
+  specs: Record<string, unknown>;
+  image_url?: string;
+  store_listings?: Array<{ price_cash: number; product_url: string }>;
+}
 
 /**
  * Server Action: Save a build by component IDs only.
  *
  * Validates user auth, reconstructs full build data server-side by
- * cross-referencing the catalog, recalculates total_price immutably,
- * and persists to Supabase under RLS protection.
+ * fetching from Supabase (single source of truth), recalculates total_price
+ * immutably, and persists to Supabase under RLS protection.
  *
  * Client never sends prices or manipulates totals.
  */
@@ -29,7 +39,35 @@ export async function saveBuild(
 
     const userId = session.user.id;
 
-    // Build the full selection by resolving IDs against catalog
+    // Fetch all component IDs from Supabase (explicit columns)
+    const { data: products, error: fetchError } = await supabase
+      .from("products")
+      .select("id, slug, name, brand, category, specs, store_listings(price_cash, product_url)");
+
+    if (fetchError || !products) {
+      return { error: "Error al cargar catálogo de validación" };
+    }
+
+    // Map Supabase data to PCComponent type for validation
+    const catalogMap = new Map(
+      (products as SupabaseProduct[]).map((item) => {
+        const listing = item.store_listings?.[0];
+        const price = listing?.price_cash ?? 0;
+        const component = {
+          id: item.id,
+          slug: item.slug,
+          name: item.name,
+          brand: item.brand,
+          category: item.category,
+          price,
+          specs: item.specs,
+          image: item.image_url,
+        } as PCComponent;
+        return [item.id, component];
+      })
+    );
+
+    // Build the full selection by resolving IDs against Supabase catalog
     const build: BuildSelection = {
       cpu: undefined,
       motherboard: undefined,
@@ -41,9 +79,9 @@ export async function saveBuild(
       psu: undefined,
     };
 
-    // Helper to find component by ID
+    // Helper to find component by ID from Supabase catalog
     const findComponent = (id: string): PCComponent | undefined => {
-      return components.find((c) => c.id === id);
+      return catalogMap.get(id);
     };
 
     // Resolve single-slot components

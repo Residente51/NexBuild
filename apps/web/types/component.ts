@@ -126,10 +126,10 @@ export type BuildSelection = {
   psu?: PSUComponent;
 };
 
-export type CompatibilityStatus = "compatible" | "warning" | "incompatible";
+export type CompatibilityStatus = "compatible" | "warning" | "incompatible" | "incomplete";
 
 export interface CompatibilityIssue {
-  status: "warning" | "incompatible";
+  status: "warning" | "incompatible" | "incomplete";
   componentCategories: ComponentCategory[];
   message: string;
   code: string;

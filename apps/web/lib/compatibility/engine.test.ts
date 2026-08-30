@@ -40,10 +40,11 @@ describe("Build Perfecta", () => {
     expect(report.issues).toHaveLength(0);
   });
 
-  it("estima un wattage total razonable", () => {
+  it("estima un wattage total con sumatorias reales", () => {
     const report = evaluateBuild(perfectBuild);
-    // CPU TDP 105W + GPU (500 * 0.65 = 325W) + 100W overhead = 530W
-    expect(report.totalWattageEstimated).toBe(530);
+    // CPU TDP 105W + GPU (500 * 0.65 = 325W) + MB 30W + RAM (2*3=6W)
+    // + Storage 0 + Cooler 0 + Case 10W = 476W
+    expect(report.totalWattageEstimated).toBe(476);
   });
 });
 
@@ -114,6 +115,165 @@ describe("Build Frankenstein", () => {
     expect(report.issues).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "RAM_MB_TYPE_MISMATCH" }),
+      ]),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3. Build Vacía — sin componentes seleccionados
+// ---------------------------------------------------------------------------
+
+describe("Build Vacía", () => {
+  const emptyBuild: BuildSelection = {
+    cpu: undefined,
+    motherboard: undefined,
+    ram: undefined,
+    gpu: undefined,
+    storage: [],
+    case: undefined,
+    psu: undefined,
+    cooler: undefined,
+  };
+
+  const report = evaluateBuild(emptyBuild);
+
+  it("devuelve estado 'incomplete'", () => {
+    expect(report.status).toBe("incomplete");
+  });
+
+  it("detecta que falta CPU", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_CPU" }),
+      ]),
+    );
+  });
+
+  it("detecta que falta motherboard", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_MOTHERBOARD" }),
+      ]),
+    );
+  });
+
+  it("detecta que falta PSU", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_PSU" }),
+      ]),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4. Build Incompleta — componentes esenciales pero sin specs
+// ---------------------------------------------------------------------------
+
+describe("Build Incompleta (falta specs)", () => {
+  const incompleteSpecsBuild: BuildSelection = {
+    cpu: {
+      id: "cpu-incomplete",
+      slug: "cpu-no-specs",
+      name: "Processor Without Specs",
+      brand: "TestBrand",
+      category: "cpu",
+      price: 100,
+      specs: undefined,
+    },
+    motherboard: {
+      id: "mb-incomplete",
+      slug: "mb-no-specs",
+      name: "Motherboard Without Specs",
+      brand: "TestBrand",
+      category: "motherboard",
+      price: 200,
+      specs: {
+        socket: "", // Falta socket válido
+        formFactor: "ATX",
+        ramType: "ddr5",
+        ramSlots: 4,
+        m2Slots: 2,
+        sataPorts: 4,
+      },
+    },
+    ram: undefined,
+    gpu: undefined,
+    storage: [],
+    case: undefined,
+    psu: {
+      id: "psu-incomplete",
+      slug: "psu-no-wattage",
+      name: "PSU Without Wattage",
+      brand: "TestBrand",
+      category: "psu",
+      price: 150,
+      specs: {
+        wattage: 0, // Falta wattage válido
+        formFactor: "atx",
+      },
+    },
+    cooler: undefined,
+  };
+
+  const report = evaluateBuild(incompleteSpecsBuild);
+
+  it("devuelve estado 'incomplete' cuando faltan specs críticas", () => {
+    expect(report.status).toBe("incomplete");
+  });
+
+  it("detecta que CPU no tiene specs definidas", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_CPU_SOCKET" }),
+      ]),
+    );
+  });
+
+  it("detecta que motherboard no tiene socket definido", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_MB_SOCKET" }),
+      ]),
+    );
+  });
+
+  it("detecta que PSU no tiene wattage definido", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_PSU_WATTAGE" }),
+      ]),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Build Parcial — solo CPU y Motherboard (componentes opcionales faltan)
+// ---------------------------------------------------------------------------
+
+describe("Build Parcial (componentes opcionales faltan)", () => {
+  const partialBuild: BuildSelection = {
+    cpu: cpuRyzen7_7700X,
+    motherboard: mbMsiB650TomahawkWifi,
+    ram: undefined,
+    gpu: undefined,
+    storage: [],
+    case: undefined,
+    psu: undefined,
+    cooler: undefined,
+  };
+
+  const report = evaluateBuild(partialBuild);
+
+  it("devuelve estado 'incomplete' si faltan PSU o case", () => {
+    expect(report.status).toBe("incomplete");
+  });
+
+  it("detecta que falta PSU", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_PSU" }),
       ]),
     );
   });

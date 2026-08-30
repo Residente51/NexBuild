@@ -25,6 +25,7 @@ const STATUS_LABELS: Record<CompatibilityStatus, string> = {
   compatible: "Compatible",
   warning: "Con Advertencias",
   incompatible: "Incompatible",
+  incomplete: "Incompleto",
 };
 
 const STATUS_CONFIG: Record<
@@ -48,6 +49,12 @@ const STATUS_CONFIG: Record<
     dotClass: "bg-builder-danger",
     bgClass: "bg-builder-danger/10",
     borderClass: "border-builder-danger/30",
+  },
+  incomplete: {
+    label: "Incompleto",
+    dotClass: "bg-white/30",
+    bgClass: "bg-white/5",
+    borderClass: "border-white/20",
   },
 };
 
@@ -189,7 +196,9 @@ export function BuildSummaryPanel({
                   className={`mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
                     issue.status === "incompatible"
                       ? "bg-builder-danger"
-                      : "bg-builder-warning"
+                      : issue.status === "warning"
+                        ? "bg-builder-warning"
+                        : "bg-white/30"
                   }`}
                 />
                 <span className="text-white/60">{issue.message}</span>

@@ -1,10 +1,11 @@
 import { Hero } from "../components/sections/Hero";
-
 import { ComponentCard } from "@/components/catalog/ComponentCard";
-import { getAllComponents } from "@/lib/components/repository";
+import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 
-export default function Home() {
-  const components = getAllComponents();
+export default async function Home() {
+  // Fetch from Supabase (single source of truth)
+  const result = await fetchCatalogFromSupabase();
+  const components = result.success ? result.data : [];
 
   return (
     <>
@@ -16,14 +17,20 @@ export default function Home() {
             Componentes destacados
           </h2>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {components.map((component) => (
-              <ComponentCard
-                key={component.id}
-                component={component}
-              />
-            ))}
-          </div>
+          {components.length === 0 ? (
+            <div className="py-8 text-center text-white/60">
+              <p>El catálogo está siendo poblado. Intenta más tarde.</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {components.slice(0, 8).map((component) => (
+                <ComponentCard
+                  key={component.id}
+                  component={component}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>

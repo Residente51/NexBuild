@@ -22,6 +22,87 @@ import type {
 // Individual validation rules
 // ---------------------------------------------------------------------------
 
+/** Build completeness — essential components and required specs. */
+const checkBuildCompleteness: CompatibilityRule = (build) => {
+  const issues: CompatibilityIssue[] = [];
+
+  // Essential components missing
+  if (!build.cpu) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["cpu"],
+      message: "Se requiere un procesador (CPU) para evaluar compatibilidad.",
+      code: "MISSING_CPU",
+    });
+  }
+
+  if (!build.motherboard) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["motherboard"],
+      message: "Se requiere una placa madre para evaluar compatibilidad.",
+      code: "MISSING_MOTHERBOARD",
+    });
+  }
+
+  if (!build.psu) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["psu"],
+      message: "Se requiere una fuente de poder para evaluar el consumo del sistema.",
+      code: "MISSING_PSU",
+    });
+  }
+
+  // Check critical specs are present for evaluation
+  if (build.cpu && (!build.cpu.specs?.socket || build.cpu.specs.socket === "")) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["cpu"],
+      message: "El procesador no tiene especificaciones de socket definidas.",
+      code: "MISSING_CPU_SOCKET",
+    });
+  }
+
+  if (build.motherboard && (!build.motherboard.specs?.socket || build.motherboard.specs.socket === "")) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["motherboard"],
+      message: "La placa madre no tiene especificaciones de socket definidas.",
+      code: "MISSING_MB_SOCKET",
+    });
+  }
+
+  if (build.motherboard && !build.motherboard.specs?.formFactor) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["motherboard"],
+      message: "La placa madre no tiene especificaciones de factor de forma definidas.",
+      code: "MISSING_MB_FORMFACTOR",
+    });
+  }
+
+  if (build.ram && !build.ram.specs?.ramType) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["ram"],
+      message: "La RAM no tiene especificaciones de tipo definidas.",
+      code: "MISSING_RAM_TYPE",
+    });
+  }
+
+  if (build.psu && (!build.psu.specs?.wattage || build.psu.specs.wattage === 0)) {
+    issues.push({
+      status: "incomplete",
+      componentCategories: ["psu"],
+      message: "La fuente no tiene especificaciones de wattage definidas.",
+      code: "MISSING_PSU_WATTAGE",
+    });
+  }
+
+  return issues;
+};
+
 /** CPU ↔ Motherboard — socket must match. */
 const checkCpuMotherboardSocket: CompatibilityRule = (build) => {
   const { cpu, motherboard } = build;
@@ -238,34 +319,56 @@ const checkPsuWattage: CompatibilityRule = (build) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Conservative wattage estimate based on structured spec data.
- * Uses `tdp` from CPU, `recommendedPsuWattage` from GPU (treated as the
- * GPU's own draw — typically ~60-70 % of the "recommended" figure), and
- * a flat overhead for the rest of the system.
+ * Conservative wattage estimate based on real component data.
+ * Sums actual power draw from all present components without fixed assumptions.
  */
 export function estimateTotalWattage(build: BuildSelection): number {
   let watts = 0;
 
-  // CPU TDP
+  // CPU TDP — most reliable spec for power draw
   const cpu = build.cpu as CPUComponent | undefined;
   if (cpu?.specs?.tdp) {
     watts += cpu.specs.tdp;
   }
 
   // GPU — use recommendedPsuWattage as a proxy for the card's own draw.
-  // The "recommended" value from AIBs already includes headroom, so we
-  // take 65 % of it as the card-level draw to avoid double-counting the
-  // CPU that's already included above.
+  // The "recommended" value from AIBs already includes system headroom,
+  // so we take 65% as the card-level draw.
   const gpu = build.gpu as GPUComponent | undefined;
   if (gpu?.specs?.recommendedPsuWattage) {
     watts += Math.round(gpu.specs.recommendedPsuWattage * 0.65);
   }
 
-  // Flat overhead: motherboard, RAM, storage, fans, etc.
-  const SYSTEM_OVERHEAD_WATTS = 100;
-  watts += SYSTEM_OVERHEAD_WATTS;
+  // Motherboard — small fixed draw, only if present
+  if (build.motherboard) {
+    watts += 30; // typical chipset + VRM + peripherals
+  }
 
-  return watts;
+  // RAM — minimal draw per module
+  const ram = build.ram;
+  if (ram?.specs?.modules) {
+    watts += ram.specs.modules * 3; // ~3W per module
+  }
+
+  // Storage — minimal draw per device
+  if (build.storage && build.storage.length > 0) {
+    watts += build.storage.length * 5; // ~5W per storage device
+  }
+
+  // Cooler — add if liquid cooled (pump + fans)
+  const cooler = build.cooler;
+  if (cooler?.specs?.type === "aio") {
+    watts += 15; // pump + fans
+  } else if (cooler?.specs?.type === "air") {
+    watts += 5; // fans only
+  }
+
+  // Case — minimal draw for fans
+  if (build.case) {
+    watts += 10; // case fans
+  }
+
+  return Math.max(watts, 50); // minimum 50W for any system
 }
 
 // ---------------------------------------------------------------------------
@@ -273,6 +376,8 @@ export function estimateTotalWattage(build: BuildSelection): number {
 // ---------------------------------------------------------------------------
 
 const rules: CompatibilityRule[] = [
+  // Completeness check must run first to prevent cascading errors
+  checkBuildCompleteness,
   checkCpuMotherboardSocket,
   checkRamMotherboardType,
   checkRamSlotCount,
@@ -311,6 +416,7 @@ export function evaluateBuild(
 // ---------------------------------------------------------------------------
 
 function deriveOverallStatus(issues: CompatibilityIssue[]): CompatibilityStatus {
+  if (issues.some((i) => i.status === "incomplete")) return "incomplete";
   if (issues.some((i) => i.status === "incompatible")) return "incompatible";
   if (issues.some((i) => i.status === "warning")) return "warning";
   return "compatible";
