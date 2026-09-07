@@ -18,6 +18,10 @@ export interface BaseComponent {
   price: number;
   image?: string;
   description?: string;
+  productUrl?: string;
+  priceUpdatedAt?: string;
+  /** Availability of the selected listing; absent on legacy saved snapshots. */
+  inStock?: boolean;
 }
 
 export interface CPUComponent extends BaseComponent {
@@ -60,6 +64,9 @@ export interface GPUComponent extends BaseComponent {
     length: number;
     slotWidth: number;
     recommendedPsuWattage: number;
+    /** Board power when known; `tdp` is retained for imported catalog data. */
+    powerDraw?: number;
+    tdp?: number;
     vram?: number;
     memoryType?: string;
   };
@@ -89,6 +96,7 @@ export interface CaseComponent extends BaseComponent {
   specs?: {
     supportedMotherboards: string[];
     maxGpuLength: number;
+    maxGpuSlotWidth?: number;
     maxCoolerHeight: number;
     supportedPsuFormFactors: string[];
     radiatorSupport: string[];

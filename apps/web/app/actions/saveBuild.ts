@@ -1,168 +1,179 @@
 "use server";
 
-import { supabase } from "@/lib/supabaseClient";
+import { calculateBuildPrice } from "@/lib/build/totals";
+import {
+  LEGACY_PRODUCT_SELECT,
+  parseProductRow,
+  PRODUCT_SELECT,
+} from "@/lib/components/validation";
+import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { BuildSelection, PCComponent } from "@/types/component";
 
-interface SupabaseProduct {
-  id: string;
-  slug: string;
-  name: string;
-  brand: string;
-  category: string;
-  specs: Record<string, unknown>;
-  image_url?: string;
-  store_listings?: Array<{ price_cash: number; product_url: string }>;
+const SINGLE_SLOTS = [
+  "cpu",
+  "motherboard",
+  "ram",
+  "gpu",
+  "case",
+  "cooler",
+  "psu",
+] as const;
+const MAX_STORAGE_DEVICES = 8;
+
+export type BuildComponentIds = Partial<
+  Record<(typeof SINGLE_SLOTS)[number], string>
+> & { storage?: string[] };
+
+function normalizeComponentIds(value: unknown):
+  | { success: true; data: BuildComponentIds; ids: string[] }
+  | { success: false; error: string } {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return { success: false, error: "Configuración inválida." };
+  }
+
+  const input = value as Record<string, unknown>;
+  const allowedKeys = new Set([...SINGLE_SLOTS, "storage"]);
+  if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
+    return { success: false, error: "La configuración contiene campos desconocidos." };
+  }
+
+  const normalized: BuildComponentIds = {};
+  const ids: string[] = [];
+  for (const slot of SINGLE_SLOTS) {
+    const id = input[slot];
+    if (id == null) continue;
+    if (typeof id !== "string" || id.trim().length === 0 || id.length > 128) {
+      return { success: false, error: `El componente ${slot} no es válido.` };
+    }
+    normalized[slot] = id;
+    ids.push(id);
+  }
+
+  const storage = input.storage;
+  if (storage != null) {
+    if (
+      !Array.isArray(storage) ||
+      storage.length > MAX_STORAGE_DEVICES ||
+      storage.some(
+        (id) => typeof id !== "string" || id.trim().length === 0 || id.length > 128,
+      )
+    ) {
+      return {
+        success: false,
+        error: `Puedes guardar hasta ${MAX_STORAGE_DEVICES} unidades de almacenamiento.`,
+      };
+    }
+    normalized.storage = storage as string[];
+    ids.push(...normalized.storage);
+  }
+
+  if (ids.length === 0) {
+    return { success: false, error: "Agrega al menos un componente antes de guardar." };
+  }
+
+  return { success: true, data: normalized, ids };
 }
 
-/**
- * Server Action: Save a build by component IDs only.
- *
- * Validates user auth, reconstructs full build data server-side by
- * fetching from Supabase (single source of truth), recalculates total_price
- * immutably, and persists to Supabase under RLS protection.
- *
- * Client never sends prices or manipulates totals.
- */
+function resolveComponent(
+  catalog: Map<string, PCComponent>,
+  id: string,
+  category: PCComponent["category"],
+): PCComponent | null {
+  const component = catalog.get(id);
+  return component?.category === category ? component : null;
+}
+
+/** Save an anonymous build after resolving every ID against the trusted catalog. */
 export async function saveBuild(
-  componentIds: Record<string, string | string[] | undefined>
+  componentIds: BuildComponentIds,
 ): Promise<{ id: string } | { error: string }> {
+  const normalized = normalizeComponentIds(componentIds);
+  if (!normalized.success) return { error: normalized.error };
+
   try {
-    // Check authentication
-    const {
-      data: { session },
-      error: authError,
-    } = await supabase.auth.getSession();
-
-    if (authError || !session) {
-      return { error: "Unauthorized" };
-    }
-
-    const userId = session.user.id;
-
-    // Fetch all component IDs from Supabase (explicit columns)
-    const { data: products, error: fetchError } = await supabase
+    const supabase = createSupabaseAdminClient();
+    const uniqueIds = [...new Set(normalized.ids)];
+    const productResult = await supabase
       .from("products")
-      .select("id, slug, name, brand, category, specs, store_listings(price_cash, product_url)");
+      .select(PRODUCT_SELECT)
+      .in("id", uniqueIds)
+      .eq("is_active", true);
+
+    // Keep deploys functional while migration 002 is rolling out.
+    let products: unknown[] | null = productResult.data;
+    let fetchError = productResult.error;
+    if (
+      productResult.error?.code === "42703" &&
+      productResult.error.message.includes("is_active")
+    ) {
+      const legacyResult = await supabase
+        .from("products")
+        .select(LEGACY_PRODUCT_SELECT)
+        .in("id", uniqueIds);
+      products = legacyResult.data;
+      fetchError = legacyResult.error;
+    }
 
     if (fetchError || !products) {
-      return { error: "Error al cargar catálogo de validación" };
+      console.error("Unable to validate build catalog IDs:", fetchError);
+      return { error: "No pudimos validar los componentes seleccionados." };
     }
 
-    // Map Supabase data to PCComponent type for validation
-    const catalogMap = new Map(
-      (products as SupabaseProduct[]).map((item) => {
-        const listing = item.store_listings?.[0];
-        const price = listing?.price_cash ?? 0;
-        const component = {
-          id: item.id,
-          slug: item.slug,
-          name: item.name,
-          brand: item.brand,
-          category: item.category,
-          price,
-          specs: item.specs,
-          image: item.image_url,
-        } as PCComponent;
-        return [item.id, component];
-      })
+    const parsedProducts = products.map(parseProductRow);
+    if (parsedProducts.some((component) => component === null)) {
+      return { error: "Uno de los componentes tiene datos inválidos." };
+    }
+
+    const catalog = new Map(
+      (parsedProducts as PCComponent[]).map((component) => [
+        component.id,
+        component,
+      ]),
     );
-
-    // Build the full selection by resolving IDs against Supabase catalog
-    const build: BuildSelection = {
-      cpu: undefined,
-      motherboard: undefined,
-      ram: undefined,
-      gpu: undefined,
-      storage: [],
-      case: undefined,
-      cooler: undefined,
-      psu: undefined,
-    };
-
-    // Helper to find component by ID from Supabase catalog
-    const findComponent = (id: string): PCComponent | undefined => {
-      return catalogMap.get(id);
-    };
-
-    // Resolve single-slot components
-    if (componentIds.cpu) {
-      const comp = findComponent(componentIds.cpu as string);
-      if (comp && comp.category === "cpu") build.cpu = comp;
+    if (catalog.size !== uniqueIds.length) {
+      return { error: "Uno o más componentes ya no están disponibles." };
     }
 
-    if (componentIds.motherboard) {
-      const comp = findComponent(componentIds.motherboard as string);
-      if (comp && comp.category === "motherboard") build.motherboard = comp;
+    if ([...catalog.values()].some((component) => component.inStock === false)) {
+      return { error: "Uno o más componentes están sin stock." };
     }
 
-    if (componentIds.ram) {
-      const comp = findComponent(componentIds.ram as string);
-      if (comp && comp.category === "ram") build.ram = comp;
-    }
-
-    if (componentIds.gpu) {
-      const comp = findComponent(componentIds.gpu as string);
-      if (comp && comp.category === "gpu") build.gpu = comp;
-    }
-
-    if (componentIds.case) {
-      const comp = findComponent(componentIds.case as string);
-      if (comp && comp.category === "case") build.case = comp;
-    }
-
-    if (componentIds.cooler) {
-      const comp = findComponent(componentIds.cooler as string);
-      if (comp && comp.category === "cooler") build.cooler = comp;
-    }
-
-    if (componentIds.psu) {
-      const comp = findComponent(componentIds.psu as string);
-      if (comp && comp.category === "psu") build.psu = comp;
-    }
-
-    // Resolve storage (array of IDs)
-    if (componentIds.storage && Array.isArray(componentIds.storage)) {
-      for (const storageId of componentIds.storage) {
-        const comp = findComponent(storageId as string);
-        if (comp && comp.category === "storage") {
-          build.storage.push(comp);
-        }
+    const build: BuildSelection = { storage: [] };
+    for (const slot of SINGLE_SLOTS) {
+      const id = normalized.data[slot];
+      if (!id) continue;
+      const component = resolveComponent(catalog, id, slot);
+      if (!component) {
+        return { error: `El componente seleccionado para ${slot} no es válido.` };
       }
+      Object.assign(build, { [slot]: component });
     }
 
-    // Recalculate total_price immutably server-side
-    let totalPrice = 0;
-
-    if (build.cpu) totalPrice += build.cpu.price;
-    if (build.motherboard) totalPrice += build.motherboard.price;
-    if (build.ram) totalPrice += build.ram.price;
-    if (build.gpu) totalPrice += build.gpu.price;
-    if (build.case) totalPrice += build.case.price;
-    if (build.cooler) totalPrice += build.cooler.price;
-    if (build.psu) totalPrice += build.psu.price;
-
-    for (const device of build.storage) {
-      totalPrice += device.price;
+    for (const id of normalized.data.storage ?? []) {
+      const component = resolveComponent(catalog, id, "storage");
+      if (!component || component.category !== "storage") {
+        return { error: "Una unidad de almacenamiento no es válida." };
+      }
+      build.storage.push(component);
     }
 
-    // Insert into Supabase with user_id set server-side
     const { data, error } = await supabase
       .from("saved_builds")
       .insert({
-        user_id: userId,
         build_data: build,
-        total_price: totalPrice,
+        total_price: calculateBuildPrice(build),
       })
       .select("id")
       .single();
 
-    if (error) {
-      return { error: error.message };
+    if (error || !data?.id) {
+      console.error("Unable to persist shared build:", error);
+      return { error: "No pudimos guardar la configuración." };
     }
 
-    return { id: data?.id || "" };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { error: message };
+    return { id: data.id };
+  } catch (error) {
+    console.error("Unexpected shared build error:", error);
+    return { error: "El servicio de builds compartidas no está disponible." };
   }
 }

@@ -819,6 +819,28 @@ const enrichmentData = {
   },
 };
 
+const compatibilityOverrides = {
+  "amd-ryzen-5-5600x": { hasIntegratedGraphics: false, includesCooler: true },
+  "amd-ryzen-7-5800x3d": { hasIntegratedGraphics: false, includesCooler: false },
+  "amd-ryzen-5-7600x": { hasIntegratedGraphics: true, includesCooler: false },
+  "amd-ryzen-7-7800x3d": { hasIntegratedGraphics: true, includesCooler: false },
+  "amd-ryzen-9-7950x": { hasIntegratedGraphics: true, includesCooler: false },
+  "intel-core-i5-12400f": { hasIntegratedGraphics: false, includesCooler: true },
+  "intel-core-i5-13600k": { hasIntegratedGraphics: true, includesCooler: false },
+  "intel-core-i7-13700k": { hasIntegratedGraphics: true, includesCooler: false },
+  "intel-core-i5-14600k": { hasIntegratedGraphics: true, includesCooler: false },
+  "intel-core-i9-14900k": { hasIntegratedGraphics: true, includesCooler: false },
+  "gigabyte-z790-aorus-elite-ax": { ramType: "ddr5" },
+  "msi-mag-z790-tomahawk-wifi": { ramType: "ddr5" },
+  "asus-prime-h610m-e-d4": { ramType: "ddr4", ramSlots: 2 },
+  "msi-geforce-rtx-4060-ventus-2x": { powerDraw: 115 },
+  "gigabyte-geforce-rtx-4070-super-windforce-oc": { powerDraw: 220 },
+  "asus-tuf-gaming-geforce-rtx-4080-super": { powerDraw: 320 },
+  "sapphire-pulse-amd-radeon-rx-7600": { powerDraw: 165 },
+  "xfx-speedster-qick-319-radeon-rx-7800-xt": { powerDraw: 263 },
+  "seagate-barracuda-2tb": { formFactor: "3.5" },
+};
+
 // ---------------------------------------------------------------------------
 // Main routine
 // ---------------------------------------------------------------------------
@@ -838,7 +860,10 @@ async function enrichCatalog() {
       .update({
         image_url: data.image_url,
         description: data.description,
-        specs: data.specs,
+        specs: {
+          ...data.specs,
+          ...(compatibilityOverrides[slug] ?? {}),
+        },
       })
       .eq("slug", slug);
 

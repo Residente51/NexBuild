@@ -28,10 +28,19 @@ if (!fs.existsSync(imagesDir)) {
 }
 
 // Generador de SVG vectorial minimalista para respaldos
+function escapeXml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
 function generateFallbackSvg(brand, category, name) {
-  const brandText = brand || 'NEXBUILD';
-  const catText = category ? category.toUpperCase() : 'COMPONENTE';
-  const nameText = name || '';
+  const brandText = escapeXml(brand || 'NEXBUILD');
+  const catText = escapeXml(category ? category.toUpperCase() : 'COMPONENTE');
+  const nameText = escapeXml(name || '');
   
   // Paleta iOS: Fondo oscuro #191923, acentos azules #0E79B2
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
@@ -81,27 +90,27 @@ const MAGIC_BYTES = {
 const SIZE_LIMIT = 5 * 1024 * 1024; // 5MB
 const TIMEOUT_MS = 8000; // 8 seconds
 
-function validateImageMagicBytes(buffer) {
-  if (!buffer || buffer.length < 4) return false;
+function detectImageExtension(buffer) {
+  if (!buffer || buffer.length < 12) return null;
 
   // Check PNG
-  if (buffer.slice(0, 4).equals(MAGIC_BYTES.png)) return true;
+  if (buffer.slice(0, 4).equals(MAGIC_BYTES.png)) return 'png';
 
   // Check JPEG
-  if (buffer.slice(0, 3).equals(MAGIC_BYTES.jpeg)) return true;
+  if (buffer.slice(0, 3).equals(MAGIC_BYTES.jpeg)) return 'jpg';
 
   // Check WebP (RIFF...WEBP)
   if (buffer.slice(0, 4).equals(MAGIC_BYTES.webp) &&
-      buffer.slice(8, 12).toString() === 'WEBP') return true;
+      buffer.slice(8, 12).toString() === 'WEBP') return 'webp';
 
   // Check GIF
-  if (buffer.slice(0, 3).equals(MAGIC_BYTES.gif)) return true;
+  if (buffer.slice(0, 3).equals(MAGIC_BYTES.gif)) return 'gif';
 
   // Reject HTML/XML/text
   const textStart = buffer.slice(0, 10).toString('utf8').toLowerCase();
-  if (textStart.includes('<!') || textStart.includes('<?')) return false;
+  if (textStart.includes('<!') || textStart.includes('<?')) return null;
 
-  return false;
+  return null;
 }
 
 async function downloadImage(url) {
@@ -146,11 +155,12 @@ async function downloadImage(url) {
     }
 
     // 6. Validate magic bytes (cryptographic file signature)
-    if (!validateImageMagicBytes(buffer)) {
+    const extension = detectImageExtension(buffer);
+    if (!extension) {
       throw new Error('Invalid image format detected (magic bytes validation failed)');
     }
 
-    return buffer;
+    return { buffer, extension };
   } catch (error) {
     const errorMsg = error.name === 'AbortError'
       ? 'Download timeout (>8s)'
@@ -177,27 +187,31 @@ async function main() {
 
   for (const product of products) {
     const name = product.name || 'Componente desconocido';
-    const slug = product.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const slug = product.slug;
+    if (!slug || !/^[a-z0-9.()-]+$/i.test(slug)) {
+      console.warn(`⚠️ Slug no seguro para ${name}; producto omitido.`);
+      continue;
+    }
     const currentUrl = product.image_url;
     let localRelativeUrl = '';
 
     console.log(`\n🔄 Procesando: ${name}`);
 
-    let imageBuffer = null;
+    let downloadedImage = null;
     
     // Si la URL actual es válida y externa, intentamos descargarla
     if (currentUrl && currentUrl.startsWith('http')) {
       console.log(`⬇️ Intentando descargar: ${currentUrl.substring(0, 70)}...`);
-      imageBuffer = await downloadImage(currentUrl);
+      downloadedImage = await downloadImage(currentUrl);
     } else {
       console.log(`⚠️ La URL actual no es válida para descarga HTTP: ${currentUrl}`);
     }
 
     // 4 & 5. Guardar PNG válido o generar SVG de respaldo
-    if (imageBuffer) {
-      const localPath = join(imagesDir, `${slug}.png`);
-      localRelativeUrl = `/images/components/${slug}.png`;
-      fs.writeFileSync(localPath, imageBuffer);
+    if (downloadedImage) {
+      const localPath = join(imagesDir, `${slug}.${downloadedImage.extension}`);
+      localRelativeUrl = `/images/components/${slug}.${downloadedImage.extension}`;
+      fs.writeFileSync(localPath, downloadedImage.buffer);
       console.log(`✅ Imagen descargada con éxito y guardada como ${slug}.png`);
     } else {
       console.log(`🛡️ Generando SVG vectorial de respaldo para ${slug}...`);

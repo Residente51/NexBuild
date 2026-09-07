@@ -1,54 +1,69 @@
 # NexBuild
 
-> **Arma mejor. Compra inteligente.**  
-> *Configurador de PCs para el mercado chileno*
+> Arma mejor. Compra inteligente.
 
-NexBuild es una plataforma integral diseñada para facilitar el armado de PCs. Su objetivo es permitir a entusiastas y compradores primerizos configurar equipos con piezas 100% compatibles, visualizar precios reales en CLP (pesos chilenos) y compartir sus configuraciones con un solo clic.
+NexBuild es un configurador de PCs para el mercado chileno. Permite explorar un catálogo en CLP, armar un equipo, comprobar las compatibilidades cubiertas por datos estructurados y compartir una configuración mediante un enlace anónimo.
 
----
+Los precios actuales son referenciales. El proyecto todavía no incluye scraping verificado, histórico de precios ni autenticación.
 
-## 🚀 Tecnologías Principales
+## Arquitectura
 
-El proyecto está construido sobre un stack moderno y eficiente, priorizando la velocidad y el renderizado asíncrono:
+La aplicación vive en `apps/web` y usa Next.js 16 con App Router, React 19, TypeScript estricto, Tailwind CSS 4, Zustand y Supabase/PostgreSQL.
 
-- **Next.js 16 (App Router):** Renderizado híbrido con un enfoque estricto en Server Components para minimizar la carga de JavaScript en el cliente.
-- **Tailwind CSS v4:** Sistema de diseño escalable configurado de forma nativa ("CSS-first") bajo la identidad visual *iOS Clean Tech*.
-- **Zustand:** Manejo de estado global ultraligero y persistente en el cliente para la gestión fluida del PC Builder.
-- **Supabase (PostgreSQL):** Base de datos relacional en la nube protegida mediante políticas RLS, utilizada para persistir el catálogo y las configuraciones compartidas.
+- `app/`: rutas, Server Components y Server Actions.
+- `components/`: UI y componentes interactivos del catálogo y builder.
+- `lib/components/`: repositorio Supabase y validación de datos externos.
+- `lib/compatibility/`: motor determinista de compatibilidad.
+- `store/`: estado local versionado y persistido del builder.
+- `data/hardware.json`: fuente de seed mantenida en el repositorio.
+- `migrations/`: esquema, políticas RLS y migraciones reversibles.
+- `scripts/`: ingesta y mantenimiento del catálogo.
 
----
+El navegador solo puede leer el catálogo público. Las builds compartidas se validan y guardan desde el servidor con la service role; esa clave nunca se entrega al cliente. Los UUID de `/build/[id]` funcionan como tokens de enlace no enumerables.
 
-## ✨ Características Clave
+## Desarrollo local
 
-- 🧠 **Motor de Compatibilidad Determinista:** El núcleo de NexBuild evalúa la configuración del usuario en tiempo real mediante un estricto conjunto de 10 reglas deterministas escritas en TypeScript (validando sockets, form factors, wattaje, clearances y más). No se utilizan heurísticas de IA para asegurar una precisión total.
-- 📦 **Catálogo Dinámico e Interactivo:** Una interfaz responsiva (Bento Grid) conectada directamente a Supabase para buscar, filtrar y añadir componentes al PC.
-- 💰 **Precios Nativos en CLP:** El sistema maneja precios reales para el mercado chileno, formateando dinámicamente los valores para mantener claridad en el presupuesto del usuario.
-- ☁️ **Persistencia Cloud Compartible:** Permite generar un enlace único (`/build/[id]`) para compartir o retomar cualquier configuración previamente construida.
+Requisitos: Node.js 20 o superior y pnpm 11.
 
----
+```bash
+cd apps/web
+pnpm install
+copy .env.example .env.local
+pnpm dev
+```
 
-## 🛠️ Desarrollo Local
+Completa en `.env.local`:
 
-Para levantar el proyecto en tu entorno local, sigue estas instrucciones:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
 
-1. Clona el repositorio e instala las dependencias mediante `pnpm` (el gestor de paquetes requerido para este workspace):
-   ```bash
-   pnpm install
-   ```
+`SUPABASE_SERVICE_ROLE_KEY` es exclusivamente de servidor: no debe llevar el prefijo `NEXT_PUBLIC_` ni almacenarse en código cliente.
 
-2. Configura las variables de entorno en un archivo `.env.local` en la raíz de `apps/web/`:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL="tu-supabase-url"
-   NEXT_PUBLIC_SUPABASE_ANON_KEY="tu-anon-key"
-   ```
+## Base de datos y catálogo
 
-3. Levanta el servidor de desarrollo:
-   ```bash
-   pnpm dev
-   ```
+En una instalación nueva, ejecuta `migrations/001_enable_rls.sql`. Para una instalación existente que usaba la migración original, ejecuta en orden:
 
-El proyecto estará corriendo y accesible en [http://localhost:3000](http://localhost:3000).
+1. `migrations/002_stabilize_schema_and_sharing.sql`
+2. `migrations/003_quarantine_generated_listings.sql`
 
----
+Cada actualización tiene un rollback no destructivo en `migrations/rollback/`. La migración 003 conserva una copia de los listings ficticios antes de marcarlos como no disponibles.
 
-> *Para conocer más sobre la arquitectura y la bitácora de decisiones técnicas, consulta el archivo [`docs/DEVLOG.md`](./docs/DEVLOG.md).*
+Después de aplicar el esquema, carga el dataset referencial:
+
+```bash
+pnpm run catalog:migrate
+```
+
+Los scripts de catálogo usan la service role y deben ejecutarse solo en un entorno confiable.
+
+## Verificación
+
+```bash
+pnpm run check
+pnpm build
+```
+
+`check` ejecuta TypeScript, ESLint y la suite de Vitest. La bitácora técnica está en [`docs/DEVLOG.md`](./docs/DEVLOG.md).

@@ -123,29 +123,56 @@ export function BuildSummaryPanel({
   const saveBuildToCloud = useBuildStore((state) => state.saveBuildToCloud);
   const [isSaving, setIsSaving] = useState(false);
   const [savedUrlCopied, setSavedUrlCopied] = useState(false);
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
+  const [savedBuildSignature, setSavedBuildSignature] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const statusCfg = STATUS_CONFIG[report.status];
+  const buildSignature = [
+    ...EXPORT_SLOT_ORDER.map((slot) => build[slot]?.id ?? ""),
+    ...build.storage.map((component) => component.id),
+  ].join("|");
 
   const handleCopy = useCallback(async () => {
-    const text = generateBuildText(build, totalPrice, report.status);
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      setActionError(null);
+      const text = generateBuildText(build, totalPrice, report.status);
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setActionError("No pudimos copiar la configuración al portapapeles.");
+    }
   }, [build, totalPrice, report.status]);
 
   const handleSaveToCloud = async () => {
     try {
       setIsSaving(true);
+      setActionError(null);
+      setSavedUrl(null);
+      setSavedBuildSignature(null);
       const id = await saveBuildToCloud();
       if (id) {
         const url = `${window.location.origin}/build/${id}`;
-        await navigator.clipboard.writeText(url);
-        setSavedUrlCopied(true);
-        setTimeout(() => setSavedUrlCopied(false), 3000);
+        setSavedUrl(url);
+        setSavedBuildSignature(buildSignature);
+        try {
+          await navigator.clipboard.writeText(url);
+          setSavedUrlCopied(true);
+          setTimeout(() => setSavedUrlCopied(false), 3000);
+        } catch {
+          setActionError(
+            "La configuración se guardó, pero no pudimos copiar el enlace automáticamente.",
+          );
+        }
       }
     } catch (error) {
       console.error("Error al guardar en la nube:", error);
-      alert("Hubo un error al guardar la configuración.");
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Hubo un error al guardar la configuración.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -161,13 +188,19 @@ export function BuildSummaryPanel({
         <p className="text-xs font-medium tracking-wide text-white/60 uppercase">
           Total estimado
         </p>
-        <p className="mt-3 text-3xl font-bold tracking-tight text-[#FBFEF9]">
+        <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums text-[#FBFEF9]">
           ${totalPrice.toLocaleString("es-CL")}
         </p>
         <p className="mt-4 text-xs text-white/60">
           Consumo estimado: ~{report.totalWattageEstimated}W
         </p>
       </div>
+
+      {actionError && (
+        <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+          {actionError}
+        </p>
+      )}
 
       {/* Compatibility card */}
       <div className="rounded-xl border border-white/10 bg-white/5 p-6">
@@ -218,8 +251,10 @@ export function BuildSummaryPanel({
       {/* Copy build */}
       {hasComponents && (
         <button
+          type="button"
           onClick={handleCopy}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl
+          aria-live="polite"
+          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl
                      px-4 py-2.5 text-sm font-medium transition-colors
                      ${
                        copied
@@ -245,12 +280,27 @@ export function BuildSummaryPanel({
         </button>
       )}
 
+      {savedUrl && savedBuildSignature === buildSignature && (
+        <div className="rounded-xl border border-builder-success/30 bg-builder-success/10 p-4" role="status">
+          <p className="text-xs font-medium text-builder-success">
+            Enlace compartible creado
+          </p>
+          <a
+            href={savedUrl}
+            className="mt-2 block break-all text-xs text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
+          >
+            {savedUrl}
+          </a>
+        </div>
+      )}
+
       {/* Save to cloud */}
       {hasComponents && (
         <button
+          type="button"
           onClick={handleSaveToCloud}
           disabled={isSaving}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl border
+          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border
                      px-4 py-2.5 text-sm font-medium transition-colors
                      ${
                        savedUrlCopied
@@ -287,8 +337,9 @@ export function BuildSummaryPanel({
       {/* Clear build */}
       {hasComponents && (
         <button
+          type="button"
           onClick={onClearBuild}
-          className="w-full rounded-xl border border-white/10 bg-white/5
+          className="min-h-11 w-full rounded-xl border border-white/10 bg-white/5
                      px-4 py-2.5 text-sm font-medium text-white/60
                      transition-colors hover:border-builder-danger/40
                      hover:text-builder-danger"

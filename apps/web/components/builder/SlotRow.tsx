@@ -85,9 +85,10 @@ export function SlotRow({
                 ${component.price.toLocaleString("es-CL")}
               </span>
               <button
+                type="button"
                 onClick={onRemove}
                 aria-label={`Quitar ${label}`}
-                className="rounded-lg p-1.5 text-builder-muted transition-colors
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-builder-muted transition-colors
                            hover:bg-builder-danger/10 hover:text-builder-danger"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -98,8 +99,9 @@ export function SlotRow({
           </>
         ) : (
           <button
+            type="button"
             onClick={onSelect}
-            className="flex w-full items-center justify-between rounded-lg px-1
+            className="flex min-h-11 w-full items-center justify-between rounded-lg px-1
                        py-1 text-sm text-builder-muted transition-colors
                        hover:text-builder-accent"
           >

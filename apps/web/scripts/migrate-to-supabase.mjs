@@ -2,14 +2,26 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Faltan NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en apps/web/.env.local');
+  process.exit(1);
+}
 const supabase = createClient(supabaseUrl, supabaseKey);
+const slugify = (value) => value
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-|-$/g, '');
 
 // 2. Leer hardware.json
 const jsonPath = path.join(__dirname, '../data/hardware.json');
@@ -29,17 +41,20 @@ async function migrate() {
   console.log('🚀 Iniciando migración a Supabase...');
 
   // Asegurar que las tiendas existen
-  const stores = ['spdigital', 'pcfactory'];
+  const stores = [
+    {
+      slug: 'nexbuild-reference',
+      name: 'Precio referencial NexBuild',
+      websiteUrl: null,
+    },
+  ];
   const storeIdMap = {};
 
-  for (const storeSlug of stores) {
-    const storeName = storeSlug === 'spdigital' ? 'SP Digital' : 'PC Factory';
-    
-    // Buscar la tienda por nombre en lugar de slug
+  for (const store of stores) {
     const { data: existingStore } = await supabase
       .from('stores')
       .select('id')
-      .eq('name', storeName)
+      .eq('slug', store.slug)
       .maybeSingle();
 
     let storeId;
@@ -51,21 +66,22 @@ async function migrate() {
       const { data: newStore, error: insertError } = await supabase
         .from('stores')
         .insert({
-          name: storeName,
-          website_url: storeSlug === 'spdigital' ? 'https://www.spdigital.cl' : 'https://www.pcfactory.cl'
+          slug: store.slug,
+          name: store.name,
+          website_url: store.websiteUrl,
         })
         .select('id')
         .single();
         
       if (insertError) {
-        console.error(`⚠️ Error al insertar tienda ${storeSlug}:`, insertError.message);
+        console.error(`⚠️ Error al insertar fuente ${store.slug}:`, insertError.message);
       } else if (newStore) {
         storeId = newStore.id;
       }
     }
     
     if (storeId) {
-      storeIdMap[storeSlug] = storeId;
+      storeIdMap[store.slug] = storeId;
     }
   }
 
@@ -76,37 +92,46 @@ async function migrate() {
     { key: 'gpus', domain: 'gpu' },
     { key: 'ram', domain: 'ram' },
     { key: 'psus', domain: 'psu' },
-    { key: 'storage', domain: 'storage' }
+    { key: 'storage', domain: 'storage' },
+    { key: 'cases', domain: 'case' },
+    { key: 'coolers', domain: 'cooler' }
   ];
 
   for (const { key, domain } of categoryMap) {
     if (!db[key]) continue;
 
     for (const item of db[key]) {
-      const slug = item.name.toLowerCase().replace(/\s+/g, '-');
+      const slug = slugify(item.name);
       let specs = {};
 
       if (domain === 'cpu') {
         specs = {
           socket: item.socket,
           tdp: item.powerDrawW,
-          hasIntegratedGraphics: false,
-          includesCooler: false,
+          hasIntegratedGraphics: item.hasIntegratedGraphics ?? false,
+          includesCooler: item.includesCooler ?? false,
         };
       } else if (domain === 'motherboard') {
         specs = {
           socket: item.socket,
           formFactor: item.formFactor,
-          ramType: item.socket === 'AM5' ? 'ddr5' : 'ddr4',
-          ramSlots: 4,
-          m2Slots: 2,
-          sataPorts: 4,
+          ramType: item.socket === 'AM5'
+            ? 'ddr5'
+            : /ddr4|\bd4\b/i.test(item.name)
+              ? 'ddr4'
+              : item.socket === 'AM4'
+                ? 'ddr4'
+                : 'ddr5',
+          ramSlots: item.ramSlots ?? 4,
+          m2Slots: item.m2Slots ?? 2,
+          sataPorts: item.sataPorts ?? 4,
         };
       } else if (domain === 'gpu') {
         specs = {
-          length: 300,
-          slotWidth: 2,
-          recommendedPsuWattage: (item.powerDrawW || 200) + 250,
+          length: item.length,
+          slotWidth: item.slotWidth,
+          recommendedPsuWattage: item.recommendedPsuWattage,
+          powerDraw: item.powerDrawW || 200,
         };
       } else if (domain === 'ram') {
         const match = item.capacity?.match(/(\d+)x(\d+)GB/i);
@@ -130,8 +155,24 @@ async function migrate() {
         }
         specs = {
           type: isNvme ? 'nvme' : 'sata',
-          formFactor: isNvme ? 'm.2 2280' : '2.5',
+          formFactor: isNvme ? 'm.2 2280' : item.type?.toLowerCase() === 'hdd' ? '3.5' : '2.5',
           capacity: capacityNum,
+        };
+      } else if (domain === 'case') {
+        specs = {
+          supportedMotherboards: item.supportedMotherboards,
+          maxGpuLength: item.maxGpuLength,
+          maxGpuSlotWidth: item.maxGpuSlotWidth,
+          maxCoolerHeight: item.maxCoolerHeight,
+          supportedPsuFormFactors: item.supportedPsuFormFactors,
+          radiatorSupport: item.radiatorSupport,
+        };
+      } else if (domain === 'cooler') {
+        specs = {
+          type: item.type,
+          supportedSockets: item.supportedSockets,
+          ...(item.height ? { height: item.height } : {}),
+          ...(item.radiatorSize ? { radiatorSize: item.radiatorSize } : {}),
         };
       }
 
@@ -156,7 +197,7 @@ async function migrate() {
       productsCount++;
 
       // Upsert a store_listings
-      const storeSlug = item.name.length % 2 === 0 ? 'spdigital' : 'pcfactory';
+      const storeSlug = 'nexbuild-reference';
       const storeId = storeIdMap[storeSlug];
 
       if (storeId && product?.id) {
@@ -175,7 +216,7 @@ async function migrate() {
             .update({
               price_cash: item.price,
               price_normal: item.price,
-              product_url: `https://www.${storeSlug}.cl/producto/${slug}`,
+              product_url: null,
               in_stock: true,
               updated_at: new Date().toISOString()
             })
@@ -189,7 +230,7 @@ async function migrate() {
               store_id: storeId,
               price_cash: item.price,
               price_normal: item.price,
-              product_url: `https://www.${storeSlug}.cl/producto/${slug}`,
+              product_url: null,
               in_stock: true
             });
           listingError = error;

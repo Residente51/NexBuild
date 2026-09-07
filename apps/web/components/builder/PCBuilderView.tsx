@@ -8,7 +8,7 @@
  * - Right (sticky summary): price, wattage, compatibility status.
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { ComponentCategory } from "@/lib/categories";
@@ -16,6 +16,7 @@ import type { BuildSelection, StorageComponent } from "@/types/component";
 import { SlotRow } from "./SlotRow";
 import { BuildSummaryPanel } from "./BuildSummaryPanel";
 import { CatalogModal } from "./CatalogModal";
+import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 
 // ---------------------------------------------------------------------------
 // Ordered slot list (the order in which rows appear in the UI)
@@ -81,9 +82,10 @@ function StorageRow({
             ${device.price.toLocaleString("es-CL")}
           </span>
           <button
+            type="button"
             onClick={onRemove}
             aria-label={`Quitar ${device.name}`}
-            className="rounded-lg p-1.5 text-builder-muted transition-colors
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-builder-muted transition-colors
                        hover:bg-builder-danger/10 hover:text-builder-danger"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -107,15 +109,30 @@ export function PCBuilderView() {
   const clearBuild = useBuildStore((s) => s.clearBuild);
   const getCompatibilityReport = useBuildStore((s) => s.getCompatibilityReport);
   const getTotalPrice = useBuildStore((s) => s.getTotalPrice);
+  const reconcileCatalog = useBuildStore((s) => s.reconcileCatalog);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<keyof BuildSelection | null>(null);
 
-  function openCatalog(category: keyof BuildSelection) {
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve(useBuildStore.persist.rehydrate())
+      .catch(() => undefined)
+      .then(() => fetchCatalogFromSupabase())
+      .then((result) => {
+        if (active && result.success) reconcileCatalog(result.data);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reconcileCatalog]);
+
+  const openCatalog = useCallback((category: keyof BuildSelection) => {
     setActiveCategory(category);
     setIsModalOpen(true);
-  }
+  }, []);
+  const closeCatalog = useCallback(() => setIsModalOpen(false), []);
 
   const report = getCompatibilityReport();
   const totalPrice = getTotalPrice();
@@ -155,9 +172,9 @@ export function PCBuilderView() {
 
             {/* Storage — array-based */}
             <div className="space-y-3">
-              {build.storage.map((device) => (
+              {build.storage.map((device, index) => (
                 <StorageRow
-                  key={device.id}
+                  key={`${device.id}-${index}`}
                   device={device}
                   onRemove={() => removeStorage(device.id)}
                 />
@@ -165,6 +182,7 @@ export function PCBuilderView() {
 
               {/* Add storage CTA */}
               <button
+                type="button"
                 onClick={() => openCatalog("storage")}
                 className="group flex w-full items-center gap-4 rounded-xl border
                            border-dashed border-white/10 bg-white/[0.03]
@@ -210,7 +228,7 @@ export function PCBuilderView() {
       {/* Catalog picker modal */}
       <CatalogModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeCatalog}
         category={activeCategory}
       />
     </section>

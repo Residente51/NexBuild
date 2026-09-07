@@ -96,31 +96,57 @@ type CatalogState = "idle" | "loading" | "ready" | "empty" | "error";
 export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   const setComponent = useBuildStore((s) => s.setComponent);
   const addStorage = useBuildStore((s) => s.addStorage);
+  const reconcileCatalog = useBuildStore((s) => s.reconcileCatalog);
 
   const [catalog, setCatalog] = useState<PCComponent[]>([]);
   const [state, setState] = useState<CatalogState>("idle");
   const hasAttemptedRef = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Close on Escape
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     },
     [onClose],
   );
 
-  const fetchCatalog = useCallback(async () => {
+  const fetchCatalog = useCallback(async (force = false) => {
     setState("loading");
-    const result = await fetchCatalogFromSupabase();
+    const result = await fetchCatalogFromSupabase({ force });
 
     if (result.success) {
       setCatalog(result.data);
+      reconcileCatalog(result.data);
       setState(result.data.length === 0 ? "empty" : "ready");
     } else {
       console.error("Error fetching catalog:", result.error);
       setState("error");
     }
-  }, []);
+  }, [reconcileCatalog]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -129,6 +155,12 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => {
+      dialogRef.current
+        ?.querySelector<HTMLElement>("button, a[href], input, [tabindex]")
+        ?.focus();
+    });
 
     // Only fetch once per session
     if (!hasAttemptedRef.current) {
@@ -139,6 +171,7 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
+      previousFocusRef.current?.focus();
     };
   }, [isOpen, handleKeyDown, fetchCatalog]);
 
@@ -164,6 +197,8 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   if (!isOpen || !category) return null;
 
   function handleSelect(item: PCComponent) {
+    if (item.inStock === false) return;
+
     if (category === "storage") {
       addStorage(item as StorageComponent);
     } else {
@@ -184,11 +219,17 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
       }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70" />
+      <div className="pointer-events-none absolute inset-0 bg-black/70" aria-hidden="true" />
 
       {/* Panel */}
       <div
+        ref={dialogRef}
         id="catalog-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="catalog-modal-title"
+        aria-describedby="catalog-modal-description"
+        tabIndex={-1}
         className="relative flex max-h-[85vh] w-full max-w-2xl flex-col
                    overflow-hidden rounded-2xl border border-white/10
                    bg-[#191923] shadow-xl shadow-black/30"
@@ -196,17 +237,18 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>
-            <h2 className="text-lg font-bold text-builder-text">
+            <h2 id="catalog-modal-title" className="text-lg font-bold text-builder-text">
               Elegir {categoryLabel}
             </h2>
-            <p className="mt-0.5 text-xs text-builder-muted">
+            <p id="catalog-modal-description" className="mt-0.5 text-xs text-builder-muted">
               {filtered.length} {filtered.length === 1 ? "opción disponible" : "opciones disponibles"}
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Cerrar modal"
-            className="rounded-lg p-2 text-builder-muted transition-colors
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-builder-muted transition-colors
                        hover:bg-builder-surface hover:text-builder-text"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -216,9 +258,9 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
         </div>
 
         {/* Product list */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6" aria-busy={state === "loading"}>
           {state === "loading" && (
-            <div className="flex h-40 items-center justify-center">
+            <div className="flex h-40 items-center justify-center" role="status">
               <p className="text-sm font-medium text-builder-text">
                 Cargando componentes desde la nube...
               </p>
@@ -232,13 +274,14 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
             </div>
           )}
           {state === "error" && (
-            <div className="flex h-40 flex-col items-center justify-center gap-3">
+            <div className="flex h-40 flex-col items-center justify-center gap-3" role="alert">
               <p className="text-sm text-builder-muted">
                 Error al cargar componentes.
               </p>
               <button
-                onClick={() => fetchCatalog()}
-                className="rounded-md bg-[#0E79B2] px-3 py-1.5 text-xs font-medium text-[#FBFEF9] transition-colors hover:bg-[#0A5C87]"
+                type="button"
+                onClick={() => fetchCatalog(true)}
+                className="min-h-11 rounded-md bg-[#0E79B2] px-3 py-1.5 text-xs font-medium text-[#FBFEF9] transition-colors hover:bg-[#0A5C87]"
               >
                 Reintentar
               </button>
@@ -288,16 +331,22 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
 
                     {/* Price + action */}
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="text-sm font-bold text-[#0E79B2]">
-                        ${item.price.toLocaleString("es-CL")}
+                      <span className="text-sm font-bold tabular-nums text-[#38BDF8]">
+                        {item.inStock === false
+                          ? "Sin stock"
+                          : item.price > 0
+                          ? `$${item.price.toLocaleString("es-CL")}`
+                          : "Sin precio"}
                       </span>
                       <button
+                        type="button"
                         onClick={() => handleSelect(item)}
-                        className="rounded-lg bg-[#0E79B2] px-4 py-1.5 text-xs
+                        disabled={item.inStock === false}
+                        className="min-h-11 rounded-lg bg-[#0E79B2] px-4 py-1.5 text-xs
                                    font-semibold text-[#FBFEF9] transition-colors
-                                   hover:bg-[#0A5C87]"
+                                   hover:bg-[#0A5C87] disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-white/35"
                       >
-                        Seleccionar
+                        {item.inStock === false ? "No disponible" : "Seleccionar"}
                       </button>
                     </div>
                   </div>

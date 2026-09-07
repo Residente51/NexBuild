@@ -34,6 +34,9 @@ Current implemented features:
 - Landing page
 - Component catalog
 - Component search
+- Interactive PC Builder with persisted local state
+- Deterministic compatibility engine
+- Anonymous shared builds backed by Supabase
 
 Everything else will be developed incrementally.
 
@@ -112,12 +115,16 @@ pnpm lint
 Typecheck:
 
 ```bash
-npx tsc --noEmit
+pnpm run typecheck
 ```
 
-No testing framework exists yet.
+Full quality gate:
 
-If tests are required, propose them first.
+```bash
+pnpm run check
+```
+
+Tests use Vitest.
 
 ---
 
@@ -197,13 +204,8 @@ Only use "use client" when interactivity requires it.
 
 Keep client components as small as possible.
 
-Catalog.tsx is the reference implementation.
-
-It owns:
-
-- search state
-- filtering
-- memoization
+Interactive catalog state lives in `app/components/page.tsx`; reusable data
+validation and mapping stay in `lib/components/`.
 
 Everything else should remain render-only whenever possible.
 
@@ -211,15 +213,22 @@ Everything else should remain render-only whenever possible.
 
 # Data
 
-Current source:
+Production source:
 
 ```
-data/components.ts
+Supabase: products + stores + store_listings
 ```
 
-There is no API.
+Repository seed source:
 
-There is no database.
+```
+data/hardware.json
+```
+
+Components must read the production catalog through
+`lib/components/repository.ts`. Shared builds are written and read only by
+server code through `lib/supabaseAdmin.ts`; never import it from a Client
+Component.
 
 Future migrations should require changing as few files as possible.
 
