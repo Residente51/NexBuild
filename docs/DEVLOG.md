@@ -2,20 +2,20 @@
 
 > **Arma mejor. Compra inteligente.**
 
-Última actualización: 25 de agosto de 2026
+Última actualización: 7 de septiembre de 2026
 
 ---
 
 ## 1. Visión Técnica
 
-NexBuild es una plataforma de armado de PCs orientada al mercado chileno. Su propósito es permitir que cualquier usuario —desde entusiastas hasta compradores primerizos— pueda configurar un equipo con piezas compatibles, visualizar precios reales en CLP y compartir o guardar sus configuraciones.
+NexBuild es una plataforma de armado de PCs orientada al mercado chileno. Su propósito es permitir que cualquier usuario —desde entusiastas hasta compradores primerizos— pueda configurar un equipo, validar las compatibilidades cubiertas, visualizar precios referenciales en CLP y compartir su configuración.
 
 ### 1.1 Principios Fundacionales
 
 | Principio | Descripción |
 |---|---|
 | **Motor Determinista** | Toda validación de compatibilidad entre componentes opera mediante reglas de código puro en TypeScript. Nunca depende de inferencia, heurísticas de IA ni "conocimiento" externo. Cada regla recibe un `BuildSelection` y retorna `CompatibilityIssue[]`. |
-| **Desacoplamiento progresivo** | La capa de datos está aislada detrás de un repositorio (`lib/components/repository.ts`). Hoy lee un mock local; mañana puede leer Supabase, una API REST o cualquier fuente sin alterar la UI. |
+| **Desacoplamiento progresivo** | La capa de datos está aislada detrás de un repositorio (`lib/components/repository.ts`). Hoy lee Supabase; otra fuente puede sustituirse sin alterar la UI. |
 | **Catálogo tipado** | Cada categoría de componente (CPU, GPU, RAM, etc.) tiene una interfaz TypeScript discriminada con `specs` estructurados. Esto permite que el motor de compatibilidad opere con certeza sobre datos estandarizados. |
 | **Incrementalismo** | El proyecto avanza en hitos pequeños y verificables. Cada commit cumple una sola responsabilidad. Cada milestone se valida antes de pasar al siguiente. |
 
@@ -29,7 +29,7 @@ NexBuild es una plataforma de armado de PCs orientada al mercado chileno. Su pro
 │  ✅ Catálogo de componentes                      │
 │  ✅ Búsqueda de componentes                      │
 │  ✅ PC Builder (8 slots, selección interactiva)  │
-│  ✅ Motor de compatibilidad (10 reglas)          │
+│  ✅ Motor de compatibilidad (13 reglas)          │
 │  ✅ Persistencia local (Zustand + localStorage)  │
 │  ✅ Persistencia cloud (Supabase)                │
 │  ✅ Builds compartidas (/build/[id])             │
@@ -75,29 +75,28 @@ NexBuild/
 │   │   └── guides/page.tsx      # Placeholder — próximamente
 │   │
 │   ├── components/              # Componentes React organizados por capa
-│   │   ├── ui/                  # Primitivos: Button, Card, SearchBar
+│   │   ├── ui/                  # Primitivos compartidos
 │   │   ├── layout/              # Navbar (sidebar fijo con navegación)
-│   │   ├── catalog/             # Catalog, ComponentCard, ComponentGrid, EmptyState
+│   │   ├── catalog/             # Tarjeta de componente para la landing
 │   │   ├── sections/            # Hero (landing page)
 │   │   └── builder/             # PCBuilderView, SlotRow, CatalogModal,
 │   │                            # BuildSummaryPanel, LoadBuildButton
 │   │
-│   ├── data/                    # Fuentes de datos
-│   │   ├── components.ts        # Mock manual (4 componentes, catálogo legacy)
-│   │   ├── hardware.json        # Dataset crudo (10 CPUs, 10 MBs, 5 GPUs,
-│   │   │                        # 5 RAMs, 5 PSUs, 5 Storage = 40 items)
-│   │   └── catalog.ts           # Generado por build-catalog.mjs
+│   ├── data/
+│   │   └── hardware.json        # Seed versionado de 44 componentes
 │   │
 │   ├── lib/                     # Lógica de dominio pura
 │   │   ├── categories.ts        # 8 categorías, labels en español
-│   │   ├── supabaseClient.ts    # Singleton con env vars validadas
+│   │   ├── supabaseClient.ts    # Cliente público de catálogo
+│   │   ├── supabaseAdmin.ts     # Cliente service-role solo servidor
+│   │   ├── build/totals.ts      # Cálculo compartido del total
 │   │   ├── seedData.ts          # 16 fixtures tipados para tests
 │   │   ├── components/
-│   │   │   ├── repository.ts    # Única fuente de verdad para datos
-│   │   │   └── search.ts        # Filtrado puro por nombre/brand/categoría
+│   │   │   ├── repository.ts    # Única fuente de verdad para catálogo
+│   │   │   └── validation.ts    # Validación runtime de filas y snapshots
 │   │   └── compatibility/
-│   │       ├── engine.ts        # Motor determinista: 10 reglas + evaluateBuild()
-│   │       └── engine.test.ts   # 2 suites: "Build Perfecta" + "Build Frankenstein"
+│   │       ├── engine.ts        # Motor determinista: 13 reglas
+│   │       └── engine.test.ts   # Cobertura compatible, incompleta y adversa
 │   │
 │   ├── store/
 │   │   └── useBuildStore.ts     # Zustand store: build state, mutations,
@@ -110,8 +109,8 @@ NexBuild/
 │   │                            # PSUComponent, CaseComponent, CoolerComponent,
 │   │                            # BuildSelection, CompatibilityIssue, etc.
 │   │
-│   └── scripts/
-│       └── build-catalog.mjs    # Transforma hardware.json → catalog.ts
+│   ├── migrations/              # Esquema, políticas y rollbacks
+│   └── scripts/                 # Ingesta y mantenimiento de Supabase
 │
 ├── CLAUDE.md                    # Contrato de colaboración AI (reglas, filosofía)
 ├── GEMINI.md                    # Contexto específico para Gemini
@@ -338,6 +337,21 @@ El layout adopta un diseño de sidebar fijo a la izquierda (`Navbar` como `<asid
 
 ---
 
+### Fase 7.6 — Estabilización de producción (7 sep 2026)
+
+- Se reemplaza la CSP estática por nonces por request mediante `proxy.ts`, permitiendo la hidratación de Next.js sin habilitar scripts inline globales.
+- Las builds anónimas pasan por una Server Action que recibe solo IDs, valida cada producto contra Supabase, recalcula el precio y escribe con una service role exclusiva de servidor.
+- `saved_builds` deja de exponerse directamente a `anon` y `authenticated`; `/build/[id]` consulta desde el servidor usando el UUID como token de enlace.
+- Se incorporan migraciones idempotentes para instalaciones nuevas y existentes, más rollbacks no destructivos. Los enlaces de tiendas fabricados por el seed antiguo se respaldan y ponen en cuarentena.
+- Todo dato de Supabase, `localStorage` o JSONB compartido se valida antes de entrar al dominio. El store persistido queda versionado y se reconcilia con el catálogo actual.
+- El repositorio selecciona el menor precio con stock y distingue explícitamente productos agotados.
+- El motor prioriza incompatibilidades sobre estados incompletos y cubre piezas obligatorias, gráficos, cooler, puertos de almacenamiento, radiadores, consumo real de GPU y grosor de GPU.
+- Se agregan cases y coolers al seed, se eliminan catálogos generados y componentes legacy sin consumidores, y se corrigen supuestos falsos del pipeline.
+- La navegación ahora es responsiva y accesible; los diálogos gestionan foco, `Escape` y tabulación. Se corrigen acciones inertes y enlaces con HTML inválido.
+- El quality gate unificado ejecuta TypeScript, ESLint y Vitest mediante `pnpm run check`.
+
+---
+
 ## 4. Convenciones del Proyecto
 
 ### 4.1 Idioma
@@ -354,7 +368,7 @@ El layout adopta un diseño de sidebar fijo a la izquierda (`Navbar` como `<asid
 
 - **Routes son delgadas.** Cada `page.tsx` bajo `app/` importa un componente y lo renderiza. No contiene lógica de negocio.
 - **Server Components por defecto.** Solo se usa `"use client"` cuando hay interactividad.
-- **Repositorios como única fuente de verdad.** Nadie importa `data/components.ts` directamente.
+- **Repositorios como única fuente de verdad.** La UI no importa seeds directamente.
 - **Funciones puras para lógica.** La búsqueda, el filtrado y la compatibilidad son funciones sin side-effects.
 
 ### 4.3 Tipado
@@ -374,7 +388,7 @@ El layout adopta un diseño de sidebar fijo a la izquierda (`Navbar` como `<asid
 
 **Cambios esperados:**
 - Scripts de scraping en Node.js (posiblemente con Puppeteer o Playwright) que se ejecutan vía cron o Supabase Edge Functions.
-- Se insertan los precios en `store_prices` con timestamp, permitiendo históricos.
+- Se insertan los precios en `store_listings` con timestamp, permitiendo históricos en una tabla futura si el producto lo requiere.
 - La UI puede mostrar "mejor precio" y comparar entre tiendas.
 - Se necesita un sistema de matching entre los productos del scraper y los componentes del catálogo (por SKU, modelo o slug normalizado).
 
@@ -404,7 +418,7 @@ El layout adopta un diseño de sidebar fijo a la izquierda (`Navbar` como `<asid
 
 - **Comparador de componentes:** La ruta `/compare` ya existe como placeholder. Implementar side-by-side de specs.
 - **Guías de armado:** La ruta `/guides` ya existe como placeholder. Contenido editorial sobre configuraciones recomendadas.
-- **PWA / Mobile:** Optimizar la experiencia en móvil. Actualmente el sidebar no es responsive.
+- **PWA:** Añadir instalación offline y estrategia de caché. La navegación responsive ya está implementada.
 - **Build presets:** Configuraciones predefinidas (Gaming Budget, Workstation, Streaming, etc.).
 - **Exportar build como imagen:** Generar una imagen compartible con el resumen de la configuración.
 - **Notificaciones de precio:** Alertar al usuario cuando un componente de su build baja de precio.
@@ -422,6 +436,6 @@ El layout adopta un diseño de sidebar fijo a la izquierda (`Navbar` como `<asid
 | `tailwindcss` / `@tailwindcss/postcss` | dev | Sistema de estilos |
 | `typescript` | dev | Tipado estático |
 | `eslint` / `eslint-config-next` | dev | Linting |
-| `vitest` | dev | Testing del motor de compatibilidad |
+| `vitest` | dev | Tests del motor, repositorio, Server Action y CSP |
 
 > **Filosofía:** Cada dependencia tiene un costo de mantenimiento. Se prefieren las APIs nativas del navegador y las capacidades de Next.js/React antes de agregar paquetes.

@@ -12,6 +12,8 @@ import {
   caseFractalTerra,
   psuCorsairRM850x,
   psuEvga450BR,
+  storageNvme,
+  coolerAio,
 } from "@/lib/seedData";
 import type { BuildSelection } from "@/types/component";
 
@@ -25,8 +27,9 @@ describe("Build Perfecta", () => {
     motherboard: mbMsiB650TomahawkWifi, // AM5, ATX, DDR5
     ram: ramCorsairVengeanceDdr5, // DDR5, 2 módulos
     gpu: gpuRtx4060, // 224mm, rec 500W
-    storage: [],
+    storage: [storageNvme],
     case: caseNzxtH6Flow, // ATX, maxGpu 365mm
+    cooler: coolerAio,
     psu: psuCorsairRM850x, // 850W ATX
   };
 
@@ -42,9 +45,9 @@ describe("Build Perfecta", () => {
 
   it("estima un wattage total con sumatorias reales", () => {
     const report = evaluateBuild(perfectBuild);
-    // CPU TDP 105W + GPU (500 * 0.65 = 325W) + MB 30W + RAM (2*3=6W)
-    // + Storage 0 + Cooler 0 + Case 10W = 476W
-    expect(report.totalWattageEstimated).toBe(476);
+    // CPU 105W + GPU board power 115W + MB 30W + RAM 6W
+    // + NVMe 5W + AIO 15W + case fans 10W = 286W
+    expect(report.totalWattageEstimated).toBe(286);
   });
 });
 
@@ -274,6 +277,65 @@ describe("Build Parcial (componentes opcionales faltan)", () => {
     expect(report.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "MISSING_PSU" }),
+      ]),
+    );
+  });
+
+  it("detecta RAM, almacenamiento y gabinete faltantes", () => {
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_RAM" }),
+        expect.objectContaining({ code: "MISSING_STORAGE" }),
+        expect.objectContaining({ code: "MISSING_CASE" }),
+      ]),
+    );
+  });
+});
+
+describe("Capacidad de almacenamiento de la placa", () => {
+  it("rechaza más unidades NVMe que ranuras M.2", () => {
+    const report = evaluateBuild({
+      cpu: cpuRyzen7_7700X,
+      motherboard: {
+        ...mbMsiB650TomahawkWifi,
+        specs: { ...mbMsiB650TomahawkWifi.specs!, m2Slots: 1 },
+      },
+      ram: ramCorsairVengeanceDdr5,
+      gpu: gpuRtx4060,
+      storage: [storageNvme, { ...storageNvme, id: "storage-second" }],
+      case: caseNzxtH6Flow,
+      cooler: coolerAio,
+      psu: psuCorsairRM850x,
+    });
+
+    expect(report.status).toBe("incompatible");
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "STORAGE_M2_SLOT_OVERFLOW" }),
+      ]),
+    );
+  });
+});
+
+describe("Espesor de GPU", () => {
+  it("rechaza una GPU que ocupa más slots que el gabinete", () => {
+    const report = evaluateBuild({
+      cpu: cpuRyzen7_7700X,
+      motherboard: mbMsiB650TomahawkWifi,
+      ram: ramCorsairVengeanceDdr5,
+      gpu: gpuRtx4080Super,
+      storage: [storageNvme],
+      case: {
+        ...caseNzxtH6Flow,
+        specs: { ...caseNzxtH6Flow.specs!, maxGpuSlotWidth: 2 },
+      },
+      cooler: coolerAio,
+      psu: psuCorsairRM850x,
+    });
+
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "GPU_CASE_SLOT_WIDTH_EXCEEDED" }),
       ]),
     );
   });

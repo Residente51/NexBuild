@@ -1,4 +1,6 @@
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import Image from "next/image";
+import { buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { PCComponent } from "@/types/component";
 
@@ -11,8 +13,19 @@ export function ComponentCard({
 }: ComponentCardProps) {
   return (
     <article className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900">
-      <div className="flex h-48 items-center justify-center bg-zinc-800">
-        <span className="text-7xl">🖥️</span>
+      <div className="relative flex h-48 items-center justify-center overflow-hidden bg-zinc-800">
+        {component.image ? (
+          <Image
+            src={component.image}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+            unoptimized
+            className="object-contain p-4"
+          />
+        ) : (
+          <span aria-hidden="true" className="text-7xl">🖥️</span>
+        )}
       </div>
 
       <div className="space-y-4 p-6">
@@ -30,16 +43,29 @@ export function ComponentCard({
           </p>
         </div>
 
-        <p className="text-3xl font-black text-white">
-          ${component.price.toLocaleString("es-CL")}
+        <p className="text-3xl font-black tabular-nums text-white">
+          {component.price > 0
+            ? `$${component.price.toLocaleString("es-CL")}`
+            : "Sin precio"}
         </p>
 
-        <Button
-          variant="primary"
-          className="w-full"
-        >
-          Ver detalles
-        </Button>
+        {component.productUrl ? (
+          <a
+            href={component.productUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClassName("primary", "w-full")}
+          >
+            Ver oferta
+          </a>
+        ) : (
+          <Link
+            href="/components"
+            className={buttonClassName("secondary", "w-full")}
+          >
+            Ver catálogo
+          </Link>
+        )}
       </div>
     </article>
   );

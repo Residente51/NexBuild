@@ -4,7 +4,7 @@
  * Each constant is a real-world component with specs filled to match
  * the interfaces in `types/component.ts`. Prices are in CLP.
  *
- * This file is NOT the production catalog (see `data/components.ts`).
+ * This file is NOT the production catalog (see `data/hardware.json`).
  * It exists solely for validating compatibility rules.
  */
 
@@ -17,7 +17,6 @@ import type {
   CaseComponent,
   PSUComponent,
   CoolerComponent,
-  PCComponent,
 } from "@/types/component";
 
 // ---------------------------------------------------------------------------
@@ -139,6 +138,7 @@ export const gpuRtx4080Super: GPUComponent = {
     length: 342,
     slotWidth: 3,
     recommendedPsuWattage: 750,
+    powerDraw: 320,
   },
 };
 
@@ -153,6 +153,7 @@ export const gpuRtx4060: GPUComponent = {
     length: 224,
     slotWidth: 2,
     recommendedPsuWattage: 500,
+    powerDraw: 115,
   },
 };
 
@@ -170,6 +171,7 @@ export const caseNzxtH6Flow: CaseComponent = {
   specs: {
     supportedMotherboards: ["ATX", "Micro-ATX", "Mini-ITX"],
     maxGpuLength: 365,
+    maxGpuSlotWidth: 4,
     maxCoolerHeight: 163,
     supportedPsuFormFactors: ["atx"],
     radiatorSupport: ["120", "140", "240", "280", "360"],
@@ -186,6 +188,7 @@ export const caseFractalTerra: CaseComponent = {
   specs: {
     supportedMotherboards: ["Mini-ITX"],
     maxGpuLength: 322,
+    maxGpuSlotWidth: 3,
     maxCoolerHeight: 77,
     supportedPsuFormFactors: ["sfx", "sfx-l"],
     radiatorSupport: [],
@@ -285,26 +288,3 @@ export const coolerAio: CoolerComponent = {
     radiatorSize: "240",
   },
 };
-
-// ---------------------------------------------------------------------------
-// Aggregated catalog for convenience
-// ---------------------------------------------------------------------------
-
-export const mockCatalog: PCComponent[] = [
-  cpuRyzen7_7700X,
-  cpuIntelI5_13600K,
-  mbMsiB650TomahawkWifi,
-  mbGigabyteB760mDS3H,
-  ramCorsairVengeanceDdr5,
-  ramKingstonFuryDdr4,
-  gpuRtx4080Super,
-  gpuRtx4060,
-  storageNvme,
-  storageSata,
-  caseNzxtH6Flow,
-  caseFractalTerra,
-  psuCorsairRM850x,
-  psuEvga450BR,
-  coolerAir,
-  coolerAio,
-];

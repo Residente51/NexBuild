@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabasePublicClient } from "@/lib/supabaseClient";
+
+const { fromMock } = vi.hoisted(() => ({ fromMock: vi.fn() }));
 
 vi.mock("@/lib/supabaseClient", () => ({
-  supabase: {
-    from: vi.fn(),
-  },
+  getSupabasePublicClient: vi.fn(() => ({ from: fromMock })),
 }));
 
 const mockSupabaseProduct = {
@@ -14,139 +14,159 @@ const mockSupabaseProduct = {
   name: "Test CPU",
   brand: "Test Brand",
   category: "cpu",
-  specs: { socket: "AM5", tdp: 105 },
+  specs: {
+    socket: "AM5",
+    tdp: 105,
+    hasIntegratedGraphics: true,
+    includesCooler: false,
+  },
   image_url: "https://example.com/cpu.jpg",
-  store_listings: [{ price_cash: 299.99, product_url: "https://example.com" }],
+  description: "Procesador de prueba",
+  is_active: true,
+  store_listings: [
+    {
+      price_cash: 299_990,
+      product_url: "https://example.com/cpu",
+      in_stock: true,
+      updated_at: "2026-09-06T00:00:00.000Z",
+    },
+  ],
 };
+
+function mockQueryResult(result: unknown, reject = false) {
+  const order = reject
+    ? vi.fn().mockRejectedValue(result)
+    : vi.fn().mockResolvedValue(result);
+  const select = vi.fn().mockReturnValue({ order });
+  fromMock.mockReturnValue({ select });
+}
 
 describe("fetchCatalogFromSupabase", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getSupabasePublicClient).mockReturnValue({ from: fromMock } as never);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("devuelve éxito con productos cuando Supabase retorna datos", async () => {
-    const mockSelect = vi.fn().mockResolvedValue({
-      data: [mockSupabaseProduct],
-      error: null,
-    });
-
-    const fromMock = supabase.from as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({ select: mockSelect });
+  it("valida y mapea productos", async () => {
+    mockQueryResult({ data: [mockSupabaseProduct], error: null });
 
     const result = await fetchCatalogFromSupabase();
 
     expect(result).toEqual({
       success: true,
-      data: expect.arrayContaining([
+      data: [
         expect.objectContaining({
           id: "1",
           name: "Test CPU",
-          brand: "Test Brand",
-          price: 299.99,
-          image: "https://example.com/cpu.jpg",
+          price: 299_990,
+          description: "Procesador de prueba",
+          productUrl: "https://example.com/cpu",
+          inStock: true,
         }),
-      ]),
+      ],
     });
   });
 
-  it("devuelve éxito con array vacío cuando Supabase retorna []", async () => {
-    const mockSelect = vi.fn().mockResolvedValue({
-      data: [],
+  it("elige el menor precio con stock antes que uno agotado", async () => {
+    mockQueryResult({
+      data: [
+        {
+          ...mockSupabaseProduct,
+          store_listings: [
+            { price_cash: 250_000, in_stock: false },
+            { price_cash: 310_000, in_stock: true },
+            { price_cash: 299_000, in_stock: true },
+          ],
+        },
+      ],
       error: null,
     });
 
-    const fromMock = supabase.from as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({ select: mockSelect });
+    const result = await fetchCatalogFromSupabase();
+    expect(result.success && result.data[0].price).toBe(299_000);
+  });
+
+  it("conserva el precio referencial pero marca productos sin stock", async () => {
+    mockQueryResult({
+      data: [
+        {
+          ...mockSupabaseProduct,
+          store_listings: [
+            { price_cash: 250_000, in_stock: false, product_url: "https://example.com/old" },
+          ],
+        },
+      ],
+      error: null,
+    });
 
     const result = await fetchCatalogFromSupabase();
+    expect(result.success && result.data[0]).toEqual(
+      expect.objectContaining({ price: 250_000, inStock: false }),
+    );
+  });
 
-    expect(result).toEqual({
+  it("descarta URLs con protocolos inseguros", async () => {
+    mockQueryResult({
+      data: [
+        {
+          ...mockSupabaseProduct,
+          image_url: "javascript:alert(1)",
+          store_listings: [
+            {
+              price_cash: 299_990,
+              in_stock: true,
+              product_url: "javascript:alert(1)",
+            },
+          ],
+        },
+      ],
+      error: null,
+    });
+
+    const result = await fetchCatalogFromSupabase();
+    expect(result.success && result.data[0]).toEqual(
+      expect.objectContaining({ image: undefined, productUrl: undefined }),
+    );
+  });
+
+  it("devuelve éxito con catálogo vacío", async () => {
+    mockQueryResult({ data: [], error: null });
+    await expect(fetchCatalogFromSupabase()).resolves.toEqual({
       success: true,
       data: [],
     });
   });
 
-  it("devuelve error cuando Supabase retorna un error", async () => {
-    const mockError = {
-      message: "Database connection failed",
-      code: "PGSQL_ERROR",
-    };
-
-    const mockSelect = vi.fn().mockResolvedValue({
+  it("no expone el mensaje interno de Supabase", async () => {
+    mockQueryResult({
       data: null,
-      error: mockError,
+      error: { message: "sensitive database detail" },
     });
 
-    const fromMock = supabase.from as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({ select: mockSelect });
-
-    const result = await fetchCatalogFromSupabase();
-
-    expect(result).toEqual({
+    await expect(fetchCatalogFromSupabase()).resolves.toEqual({
       success: false,
-      error: "Database connection failed",
+      error: "No pudimos cargar el catálogo. Intenta nuevamente.",
     });
   });
 
-  it("devuelve error cuando data es null sin error explícito", async () => {
-    const mockSelect = vi.fn().mockResolvedValue({
-      data: null,
+  it("rechaza filas que no cumplen el modelo de dominio", async () => {
+    mockQueryResult({
+      data: [{ ...mockSupabaseProduct, category: "unknown" }],
       error: null,
     });
 
-    const fromMock = supabase.from as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({ select: mockSelect });
-
-    const result = await fetchCatalogFromSupabase();
-
-    expect(result).toEqual({
+    await expect(fetchCatalogFromSupabase()).resolves.toEqual({
       success: false,
-      error: "No se recibieron datos del servidor",
+      error: "El catálogo contiene datos inválidos.",
     });
   });
 
-  it("devuelve error cuando se lanza una excepción", async () => {
-    const mockError = new Error("Network error");
-    const mockSelect = vi.fn().mockRejectedValue(mockError);
+  it("convierte excepciones de red en un error seguro", async () => {
+    mockQueryResult(new Error("private network error"), true);
 
-    const fromMock = supabase.from as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({ select: mockSelect });
-
-    const result = await fetchCatalogFromSupabase();
-
-    expect(result).toEqual({
+    await expect(fetchCatalogFromSupabase()).resolves.toEqual({
       success: false,
-      error: "Network error",
-    });
-  });
-
-  it("mapea correctamente los precios por defecto cuando no hay store_listings", async () => {
-    const productWithoutListing = {
-      ...mockSupabaseProduct,
-      store_listings: [],
-    };
-
-    const mockSelect = vi.fn().mockResolvedValue({
-      data: [productWithoutListing],
-      error: null,
-    });
-
-    const fromMock = supabase.from as ReturnType<typeof vi.fn>;
-    fromMock.mockReturnValue({ select: mockSelect });
-
-    const result = await fetchCatalogFromSupabase();
-
-    expect(result).toEqual({
-      success: true,
-      data: expect.arrayContaining([
-        expect.objectContaining({
-          price: 0,
-        }),
-      ]),
+      error: "No pudimos conectar con el catálogo. Intenta nuevamente.",
     });
   });
 });

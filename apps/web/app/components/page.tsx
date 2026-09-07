@@ -3,17 +3,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useBuildStore } from "@/store/useBuildStore";
-import type { BuildStore } from "@/store/useBuildStore";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import { CATEGORY_LABELS, ComponentCategory } from "@/lib/categories";
 import type { PCComponent, StorageComponent, BuildSelection } from "@/types/component";
 
 type FilterCategory = "all" | ComponentCategory;
-
-const selectBuildActions = (state: BuildStore) => ({
-  setComponent: state.setComponent,
-  addStorage: state.addStorage,
-});
 
 function formatSpecs(component: PCComponent): string[] {
   if (!component.specs) return [];
@@ -92,29 +86,36 @@ export default function ComponentsPage() {
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const hasInitialized = useRef(false);
 
-  const { setComponent, addStorage } = useBuildStore(selectBuildActions);
+  const setComponent = useBuildStore((state) => state.setComponent);
+  const addStorage = useBuildStore((state) => state.addStorage);
+  const reconcileCatalog = useBuildStore((state) => state.reconcileCatalog);
 
-  const handleLoadCatalog = useCallback(async () => {
+  const handleLoadCatalog = useCallback(async (force = false) => {
     setState("loading");
     setError(null);
-    const result = await fetchCatalogFromSupabase();
+    const result = await fetchCatalogFromSupabase({ force });
     if (result.success) {
       setCatalog(result.data);
+      reconcileCatalog(result.data);
       setState(result.data.length === 0 ? "empty" : "ready");
     } else {
       console.error("Error loading catalog:", result.error);
       setError(result.error);
       setState("error");
     }
-  }, []);
+  }, [reconcileCatalog]);
 
   useEffect(() => {
     const load = async () => {
       setState("loading");
       setError(null);
+      await Promise.resolve(useBuildStore.persist.rehydrate()).catch(
+        () => undefined,
+      );
       const result = await fetchCatalogFromSupabase();
       if (result.success) {
         setCatalog(result.data);
+        reconcileCatalog(result.data);
         setState(result.data.length === 0 ? "empty" : "ready");
       } else {
         console.error("Error loading catalog:", result.error);
@@ -127,7 +128,7 @@ export default function ComponentsPage() {
       hasInitialized.current = true;
       load();
     }
-  }, []);
+  }, [reconcileCatalog]);
 
   const categories: { id: FilterCategory; label: string }[] = [
     { id: "all", label: "Todos" },
@@ -156,6 +157,8 @@ export default function ComponentsPage() {
   }, [filteredCatalog]);
 
   const handleAdd = useCallback((item: PCComponent) => {
+    if (item.inStock === false) return;
+
     if (item.category === "storage") {
       addStorage(item as StorageComponent);
     } else {
@@ -177,13 +180,16 @@ export default function ComponentsPage() {
               Catálogo de Componentes
             </h1>
             <p className="mt-2 text-white/60">
-              Explora y selecciona las piezas perfectas para armar tu equipo ideal.
+              Explora el catálogo y añade piezas a tu configuración.
             </p>
           </div>
 
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             {/* Search Input */}
             <div className="relative w-full md:max-w-md">
+              <label htmlFor="catalog-search" className="sr-only">
+                Buscar por componente o marca
+              </label>
               <svg
                 className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40"
                 fill="none"
@@ -198,6 +204,7 @@ export default function ComponentsPage() {
                 />
               </svg>
               <input
+                id="catalog-search"
                 type="text"
                 placeholder="Buscar componente o marca..."
                 value={searchQuery}
@@ -207,12 +214,18 @@ export default function ComponentsPage() {
             </div>
 
             {/* Category Filters */}
-            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+            <div
+              className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar"
+              role="group"
+              aria-label="Filtrar por categoría"
+            >
               {categories.map((cat) => (
                 <button
+                  type="button"
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs font-medium transition-colors ${
+                  aria-pressed={activeCategory === cat.id}
+                  className={`min-h-11 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-medium transition-colors ${
                     activeCategory === cat.id
                       ? "bg-[#0E79B2] text-[#FBFEF9]"
                       : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
@@ -250,8 +263,9 @@ export default function ComponentsPage() {
               )}
             </div>
             <button
-              onClick={() => handleLoadCatalog()}
-              className="rounded-xl bg-[#0E79B2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0A5C87]"
+              type="button"
+              onClick={() => handleLoadCatalog(true)}
+              className="min-h-11 rounded-xl bg-[#0E79B2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0A5C87]"
             >
               Reintentar
             </button>
@@ -334,20 +348,29 @@ export default function ComponentsPage() {
                   
                   {/* Bottom section */}
                   <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4">
-                    <span className="text-lg font-bold text-[#FBFEF9]">
-                      ${item.price?.toLocaleString("es-CL") || "0"}
+                    <span className="text-lg font-bold tabular-nums text-[#FBFEF9]">
+                      {item.inStock === false
+                        ? "Sin stock"
+                        : item.price > 0
+                        ? `$${item.price.toLocaleString("es-CL")}`
+                        : "Sin precio"}
                     </span>
                     
                     <button
+                      type="button"
                       onClick={() => handleAdd(item)}
-                      disabled={addedItems[item.id]}
-                      className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-                        addedItems[item.id]
+                      disabled={addedItems[item.id] || item.inStock === false}
+                      className={`flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed ${
+                        item.inStock === false
+                          ? "bg-white/5 text-white/35"
+                          : addedItems[item.id]
                           ? "bg-[#34D399]/20 text-[#34D399]"
                           : "bg-[#0E79B2] text-white hover:bg-[#0A5C87]"
                       }`}
                     >
-                      {addedItems[item.id] ? (
+                      {item.inStock === false ? (
+                        "No disponible"
+                      ) : addedItems[item.id] ? (
                         <>
                           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />

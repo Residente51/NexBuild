@@ -10,6 +10,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { evaluateBuild } from "@/lib/compatibility/engine";
+import { calculateBuildPrice } from "@/lib/build/totals";
+import {
+  parseBuildSelection,
+  reconcileBuildWithCatalog,
+} from "@/lib/components/validation";
 import { saveBuild } from "@/app/actions/saveBuild";
 import type {
   BuildSelection,
@@ -41,6 +46,8 @@ interface BuildActions {
   
   /** Load an entire build from data */
   loadBuild: (build: BuildSelection) => void;
+  /** Refresh persisted component snapshots with current catalog records. */
+  reconcileCatalog: (catalog: PCComponent[]) => void;
 
   /** Run the compatibility engine against the current build. */
   getCompatibilityReport: () => BuildCompatibilityReport;
@@ -72,6 +79,10 @@ const EMPTY_BUILD: BuildSelection = {
   psu: undefined,
 };
 
+function createEmptyBuild(): BuildSelection {
+  return { ...EMPTY_BUILD, storage: [] };
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -79,7 +90,7 @@ const EMPTY_BUILD: BuildSelection = {
 export const useBuildStore = create<BuildStore>()(
   persist(
     (set, get) => ({
-  build: { ...EMPTY_BUILD },
+  build: createEmptyBuild(),
 
   // -- Mutations -------------------------------------------------------------
 
@@ -102,40 +113,35 @@ export const useBuildStore = create<BuildStore>()(
     })),
 
   removeStorage: (deviceId) =>
-    set((state) => ({
-      build: {
-        ...state.build,
-        storage: state.build.storage.filter((d) => d.id !== deviceId),
-      },
-    })),
+    set((state) => {
+      const index = state.build.storage.findIndex((device) => device.id === deviceId);
+      if (index < 0) return state;
+      return {
+        build: {
+          ...state.build,
+          storage: state.build.storage.filter((_, itemIndex) => itemIndex !== index),
+        },
+      };
+    }),
 
   clearBuild: () =>
-    set({ build: { ...EMPTY_BUILD, storage: [] } }),
+    set({ build: createEmptyBuild() }),
 
-  loadBuild: (build) => set({ build }),
+  loadBuild: (build) => {
+    const parsed = parseBuildSelection(build);
+    if (parsed) set({ build: parsed });
+  },
+
+  reconcileCatalog: (catalog) =>
+    set((state) => ({
+      build: reconcileBuildWithCatalog(state.build, catalog),
+    })),
 
   // -- Derived state (computed on demand) ------------------------------------
 
   getCompatibilityReport: () => evaluateBuild(get().build),
 
-  getTotalPrice: () => {
-    const { build } = get();
-    let total = 0;
-
-    if (build.cpu) total += build.cpu.price;
-    if (build.motherboard) total += build.motherboard.price;
-    if (build.ram) total += build.ram.price;
-    if (build.gpu) total += build.gpu.price;
-    if (build.case) total += build.case.price;
-    if (build.cooler) total += build.cooler.price;
-    if (build.psu) total += build.psu.price;
-
-    for (const device of build.storage) {
-      total += device.price;
-    }
-
-    return total;
-  },
+  getTotalPrice: () => calculateBuildPrice(get().build),
 
   saveBuildToCloud: async () => {
     const { build } = get();
@@ -164,7 +170,22 @@ export const useBuildStore = create<BuildStore>()(
     }),
     {
       name: "nexbuild-active-build",
+      version: 1,
+      skipHydration: true,
       partialize: (state) => ({ build: state.build }),
+      migrate: (persistedState) => {
+        const persisted = persistedState as { build?: unknown } | null;
+        return {
+          build: parseBuildSelection(persisted?.build) ?? createEmptyBuild(),
+        };
+      },
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as { build?: unknown } | null;
+        return {
+          ...currentState,
+          build: parseBuildSelection(persisted?.build) ?? createEmptyBuild(),
+        };
+      },
     },
   ),
 );

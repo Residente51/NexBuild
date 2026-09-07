@@ -6,7 +6,9 @@
       "brand": "AMD",
       "socket": "AM4",
       "price": 130000,
-      "powerDrawW": 65
+      "powerDrawW": 65,
+      "hasIntegratedGraphics": false,
+      "includesCooler": true
     },
     {
       "id": "cpu-2",
@@ -14,7 +16,9 @@
       "brand": "AMD",
       "socket": "AM4",
       "price": 280000,
-      "powerDrawW": 105
+      "powerDrawW": 105,
+      "hasIntegratedGraphics": false,
+      "includesCooler": false
     },
     {
       "id": "cpu-3",
@@ -22,7 +26,9 @@
       "brand": "AMD",
       "socket": "AM5",
       "price": 220000,
-      "powerDrawW": 105
+      "powerDrawW": 105,
+      "hasIntegratedGraphics": true,
+      "includesCooler": false
     },
     {
       "id": "cpu-4",
@@ -30,7 +36,9 @@
       "brand": "AMD",
       "socket": "AM5",
       "price": 380000,
-      "powerDrawW": 120
+      "powerDrawW": 120,
+      "hasIntegratedGraphics": true,
+      "includesCooler": false
     },
     {
       "id": "cpu-5",
@@ -38,7 +46,9 @@
       "brand": "AMD",
       "socket": "AM5",
       "price": 550000,
-      "powerDrawW": 170
+      "powerDrawW": 170,
+      "hasIntegratedGraphics": true,
+      "includesCooler": false
     },
     {
       "id": "cpu-6",
@@ -46,7 +56,9 @@
       "brand": "Intel",
       "socket": "LGA1700",
       "price": 140000,
-      "powerDrawW": 65
+      "powerDrawW": 65,
+      "hasIntegratedGraphics": false,
+      "includesCooler": true
     },
     {
       "id": "cpu-7",
@@ -54,7 +66,9 @@
       "brand": "Intel",
       "socket": "LGA1700",
       "price": 280000,
-      "powerDrawW": 125
+      "powerDrawW": 125,
+      "hasIntegratedGraphics": true,
+      "includesCooler": false
     },
     {
       "id": "cpu-8",
@@ -62,7 +76,9 @@
       "brand": "Intel",
       "socket": "LGA1700",
       "price": 380000,
-      "powerDrawW": 125
+      "powerDrawW": 125,
+      "hasIntegratedGraphics": true,
+      "includesCooler": false
     },
     {
       "id": "cpu-9",
@@ -70,7 +86,9 @@
       "brand": "Intel",
       "socket": "LGA1700",
       "price": 310000,
-      "powerDrawW": 125
+      "powerDrawW": 125,
+      "hasIntegratedGraphics": true,
+      "includesCooler": false
     },
     {
       "id": "cpu-10",
@@ -78,7 +96,9 @@
       "brand": "Intel",
       "socket": "LGA1700",
       "price": 580000,
-      "powerDrawW": 125
+      "powerDrawW": 125,
+      "hasIntegratedGraphics": true,
+      "includesCooler": false
     }
   ],
   "motherboards": [
@@ -144,7 +164,8 @@
       "brand": "ASUS",
       "socket": "LGA1700",
       "price": 80000,
-      "formFactor": "Micro-ATX"
+      "formFactor": "Micro-ATX",
+      "ramSlots": 2
     },
     {
       "id": "mb-9",
@@ -169,6 +190,9 @@
       "name": "MSI GeForce RTX 4060 VENTUS 2X",
       "brand": "MSI",
       "powerDrawW": 115,
+      "length": 240,
+      "slotWidth": 2,
+      "recommendedPsuWattage": 550,
       "memory": "8GB",
       "price": 320000
     },
@@ -177,6 +201,9 @@
       "name": "Gigabyte GeForce RTX 4070 SUPER WINDFORCE OC",
       "brand": "Gigabyte",
       "powerDrawW": 220,
+      "length": 282,
+      "slotWidth": 2.5,
+      "recommendedPsuWattage": 650,
       "memory": "12GB",
       "price": 650000
     },
@@ -185,6 +212,9 @@
       "name": "ASUS TUF Gaming GeForce RTX 4080 SUPER",
       "brand": "ASUS",
       "powerDrawW": 320,
+      "length": 348,
+      "slotWidth": 3.15,
+      "recommendedPsuWattage": 750,
       "memory": "16GB",
       "price": 1150000
     },
@@ -193,6 +223,9 @@
       "name": "Sapphire PULSE AMD Radeon RX 7600",
       "brand": "Sapphire",
       "powerDrawW": 165,
+      "length": 241,
+      "slotWidth": 2,
+      "recommendedPsuWattage": 550,
       "memory": "8GB",
       "price": 290000
     },
@@ -201,6 +234,9 @@
       "name": "XFX Speedster QICK 319 Radeon RX 7800 XT",
       "brand": "XFX",
       "powerDrawW": 263,
+      "length": 340,
+      "slotWidth": 2.5,
+      "recommendedPsuWattage": 700,
       "memory": "16GB",
       "price": 540000
     }
@@ -334,6 +370,52 @@
       "type": "hdd",
       "capacity": "2TB",
       "price": 55000
+    }
+  ],
+  "cases": [
+    {
+      "id": "case-1",
+      "name": "NZXT H6 Flow",
+      "brand": "NZXT",
+      "price": 99990,
+      "supportedMotherboards": ["ATX", "Micro-ATX", "Mini-ITX"],
+      "maxGpuLength": 365,
+      "maxGpuSlotWidth": 4,
+      "maxCoolerHeight": 163,
+      "supportedPsuFormFactors": ["atx"],
+      "radiatorSupport": ["120", "140", "240", "280", "360"]
+    },
+    {
+      "id": "case-2",
+      "name": "Fractal Design Terra",
+      "brand": "Fractal Design",
+      "price": 149990,
+      "supportedMotherboards": ["Mini-ITX"],
+      "maxGpuLength": 322,
+      "maxGpuSlotWidth": 3,
+      "maxCoolerHeight": 77,
+      "supportedPsuFormFactors": ["sfx", "sfx-l"],
+      "radiatorSupport": []
+    }
+  ],
+  "coolers": [
+    {
+      "id": "cooler-1",
+      "name": "Noctua NH-D15",
+      "brand": "Noctua",
+      "price": 109990,
+      "type": "air",
+      "supportedSockets": ["AM4", "AM5", "LGA1700"],
+      "height": 165
+    },
+    {
+      "id": "cooler-2",
+      "name": "NZXT Kraken 240",
+      "brand": "NZXT",
+      "price": 134990,
+      "type": "aio",
+      "supportedSockets": ["AM4", "AM5", "LGA1700"],
+      "radiatorSize": "240"
     }
   ]
 }

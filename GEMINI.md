@@ -8,13 +8,13 @@ Este archivo complementa la información proporcionada en `CLAUDE.md` y establec
 NexBuild es una plataforma de hardware orientada a la creación de PCs ("Arma mejor. Compra inteligente."). Aunque actualmente muestra un catálogo de componentes, su visión completa es ser un constructor de PCs integral.
 
 ## 2. Objetivo Principal del Producto
-El objetivo principal es evolucionar desde un simple catálogo de componentes hacia un **PC Builder completo**, que permita a los usuarios armar equipos compatibles, comparar opciones y tomar decisiones de compra informadas con precios reales.
+El producto ya incluye un **PC Builder funcional**. El siguiente objetivo es ampliar su cobertura técnica y conectar precios reales verificados; los valores actuales son referenciales.
 
 ## 3. Arquitectura Actual Real
 La aplicación está construida sobre una arquitectura que separa la capa de visualización de la capa de acceso a datos:
 - El ruteo (`app/`) se mantiene extremadamente delgado.
 - Los componentes interactivos (como la barra de búsqueda y el filtrado del catálogo) delegan la obtención de datos hacia capas puras o repositorios (ej. `lib/components/repository.ts`).
-- Esto permite que el día de mañana se reemplace el archivo local por una API o base de datos sin alterar la interfaz de usuario.
+- El catálogo de producción se obtiene desde Supabase y toda fila externa se valida antes de entrar al modelo de dominio.
 
 ## 4. Stack Actual
 - Next.js 16.2.12 (App Router).
@@ -25,8 +25,9 @@ La aplicación está construida sobre una arquitectura que separa la capa de vis
 
 ## 5. Estructura del Proyecto
 Además de las divisiones indicadas en `CLAUDE.md`, la estructura real analizada muestra:
-- `data/`: Contiene el mock actual de los datos (`components.ts`). No existe base de datos todavía.
-- `lib/`: Contiene lógica de dominio pura (como la búsqueda en `lib/components/search.ts`) y los repositorios.
+- `data/hardware.json`: Fuente versionada para poblar el catálogo referencial.
+- `lib/`: Contiene validación de fronteras, acceso a Supabase, totales y el motor de compatibilidad.
+- `migrations/`: Esquema PostgreSQL, RLS y rollbacks no destructivos.
 - `types/`: Definición estricta de las interfaces de dominio (ej: `PCComponent`).
 
 ## 6. Convenciones de Código
@@ -40,11 +41,11 @@ Además de las divisiones indicadas en `CLAUDE.md`, la estructura real analizada
 - Los identificadores de dominio (como las claves de las categorías) son inmutables.
 
 ## 8. Principios Arquitectónicos
-- **Repositorios como única fuente de verdad:** Ningún componente debe leer `data/components.ts` directamente; siempre deben pasar por las funciones provistas en `lib/components/repository.ts`.
+- **Repositorios como única fuente de verdad:** La UI obtiene el catálogo mediante `lib/components/repository.ts`; no importa seeds directamente.
 - **Desacoplamiento progresivo:** El diseño debe prepararse para la asincronía y el consumo de bases de datos.
 
 ## 9. Restricciones: Qué NO modificar sin consultar
-- No modifiques el mock de datos (`data/components.ts`) para tareas no relacionadas.
+- No modifiques el seed (`data/hardware.json`) para tareas no relacionadas.
 - No alteres los esquemas de metadatos por defecto ni el texto placeholder a menos que se te pida explícitamente.
 - No cambies los contratos de interfaces en `types/` sin proponerlo primero, ya que afectan todo el proyecto.
 - No realices grandes refactorizaciones ni instales nuevas herramientas (ej. DBs, sistemas de estado global) sin aprobación previa.
@@ -60,10 +61,10 @@ Cuando presentes información, debes distinguir claramente entre:
 - **Recomendaciones:** Sugerencias u opiniones que aportes para mejorar la arquitectura, sujetas a aprobación.
 
 ## 12. Estado Actual del Proyecto
-El proyecto cuenta con un catálogo funcional y un sistema de búsqueda. En este momento se está realizando una extracción (refactor) de la lógica hacia repositorios para simular una API estática y desacoplar los datos de los Client Components, pero aún opera de manera 100% síncrona.
+El proyecto cuenta con catálogo Supabase, búsqueda, Builder persistente, motor determinista, guardado anónimo y enlaces compartidos. El acceso al catálogo es asíncrono y la persistencia cloud pasa por código exclusivo de servidor.
 
 ## 13. Próxima Dirección Estratégica
-El siguiente gran hito del proyecto es **convertir el catálogo en un PC Builder**. Esto implica poder seleccionar piezas (CPU, GPU, RAM, etc.) desde el catálogo e ir armando una configuración.
+Los siguientes hitos son incorporar precios reales verificables, ampliar la cobertura de compatibilidad y añadir autenticación sin romper los enlaces anónimos existentes.
 
 ## 14. Compatibilidad Técnica (Regla Crítica)
 **REGLA EXPLÍCITA:** La compatibilidad técnica entre los componentes del PC Builder (por ejemplo, validar si un CPU y una Placa Madre comparten el mismo socket, o si el factor de forma coincide) DEBE estar basada exclusivamente en **lógica determinista y datos estructurados**. Nunca debe depender del "conocimiento" interno, razonamiento o suposiciones de un LLM. Todo motor de compatibilidad debe operar mediante reglas de código verificables que crucen los datos estandarizados del catálogo.

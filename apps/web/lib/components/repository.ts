@@ -1,66 +1,86 @@
 /**
- * Component repository.
- *
- * Supabase is the single source of truth for component data.
- * All reads go through this module, ensuring consistency and
- * making it easy to swap implementations without affecting callers.
+ * Catalog repository. Supabase is the production source of truth; all rows are
+ * validated before they enter the domain model.
  */
 
 import type { PCComponent } from "@/types/component";
-import { supabase } from "../supabaseClient";
+import { getSupabasePublicClient } from "@/lib/supabaseClient";
+import {
+  LEGACY_PRODUCT_SELECT,
+  parseProductRow,
+} from "./validation";
 
 export type CatalogResult =
   | { success: true; data: PCComponent[] }
   | { success: false; error: string };
 
-interface SupabaseProduct {
-  id: string;
-  slug: string;
-  name: string;
-  brand: string;
-  category: string;
-  specs: Record<string, unknown>;
-  image_url?: string;
-  store_listings?: Array<{ price_cash: number; product_url: string }>;
-}
+let browserCatalogRequest: Promise<CatalogResult> | null = null;
 
-export async function fetchCatalogFromSupabase(): Promise<CatalogResult> {
+async function loadCatalog(): Promise<CatalogResult> {
   try {
-    // Explicit column selection instead of select('*') for type safety and performance
+    const supabase = getSupabasePublicClient();
+    // Active rows are filtered by the public RLS policy after migration 002.
+    // Omitting the new column keeps reads compatible during the rollout.
     const { data, error } = await supabase
-      .from('products')
-      .select('id, slug, name, brand, category, specs, image_url, store_listings(price_cash, product_url)');
+      .from("products")
+      .select(LEGACY_PRODUCT_SELECT)
+      .order("name", { ascending: true });
 
     if (error) {
       console.error("Error fetching catalog from Supabase:", error);
-      return { success: false, error: error.message || "Error desconocido al cargar el catálogo" };
+      return {
+        success: false,
+        error: "No pudimos cargar el catálogo. Intenta nuevamente.",
+      };
     }
 
     if (!data) {
-      return { success: false, error: "No se recibieron datos del servidor" };
+      return {
+        success: false,
+        error: "No se recibieron datos del catálogo.",
+      };
     }
 
-    const mapped = (data as SupabaseProduct[]).map((item) => {
-      const listing = item.store_listings?.[0];
-      const price = listing?.price_cash ?? 0;
+    const mapped = data
+      .map(parseProductRow)
+      .filter((component): component is PCComponent => component !== null);
 
-      // Type-safe mapping with explicit validation
+    if (data.length > 0 && mapped.length === 0) {
+      console.error("Catalog rows failed domain validation");
       return {
-        id: item.id,
-        slug: item.slug,
-        name: item.name,
-        brand: item.brand,
-        category: item.category,
-        price,
-        specs: item.specs,
-        image: item.image_url,
-      } as PCComponent;
-    });
+        success: false,
+        error: "El catálogo contiene datos inválidos.",
+      };
+    }
+
+    if (mapped.length !== data.length) {
+      console.warn(
+        `Ignored ${data.length - mapped.length} invalid catalog row(s)`,
+      );
+    }
 
     return { success: true, data: mapped };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Error desconocido";
-    console.error("Exception fetching catalog:", message);
-    return { success: false, error: message };
+  } catch (error) {
+    console.error("Exception fetching catalog:", error);
+    return {
+      success: false,
+      error: "No pudimos conectar con el catálogo. Intenta nuevamente.",
+    };
   }
+}
+
+/**
+ * Cache one request per browser session so the builder and its modal do not
+ * download the same catalog twice. Server requests remain isolated.
+ */
+export function fetchCatalogFromSupabase(options?: {
+  force?: boolean;
+}): Promise<CatalogResult> {
+  if (typeof window === "undefined") return loadCatalog();
+
+  if (options?.force || !browserCatalogRequest) {
+    browserCatalogRequest = loadCatalog();
+  }
+
+  return browserCatalogRequest;
 }

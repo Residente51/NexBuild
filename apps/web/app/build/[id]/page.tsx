@@ -1,9 +1,10 @@
-import { supabase } from "@/lib/supabaseClient";
-import Link from "next/link";
+import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { calculateBuildPrice } from "@/lib/build/totals";
+import { parseBuildSelection } from "@/lib/components/validation";
+import { notFound } from "next/navigation";
 import LoadBuildButton from "@/components/builder/LoadBuildButton";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { ComponentCategory } from "@/lib/categories";
-import type { BuildSelection } from "@/types/component";
 
 export default async function SharedBuildPage({
   params,
@@ -12,32 +13,32 @@ export default async function SharedBuildPage({
 }) {
   const { id } = await params;
   
-  // Realiza la consulta a Supabase en el servidor
-  const { data, error } = await supabase
-    .from("saved_builds")
-    .select("*")
-    .eq("id", id)
-    .single();
+  let data: {
+    build_data: unknown;
+    created_at: string | null;
+  } | null = null;
+  let hasError = false;
 
-  if (error || !data) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4 px-4 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-[#FBFEF9]">Configuración no encontrada</h1>
-        <p className="max-w-md text-sm text-white/60">
-          El enlace que intentas visitar no existe o ha expirado. Por favor verifica la URL.
-        </p>
-        <Link 
-          href="/builder"
-          className="mt-4 inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-6 py-2.5 text-sm font-medium text-[#FBFEF9] transition-colors hover:bg-white/10"
-        >
-          Ir al configurador
-        </Link>
-      </div>
-    );
+  try {
+    const supabase = createSupabaseAdminClient();
+    const result = await supabase
+      .from("saved_builds")
+      .select("build_data, created_at")
+      .eq("id", id)
+      .single();
+    data = result.data;
+    hasError = Boolean(result.error);
+  } catch (error) {
+    console.error("Unable to load shared build:", error);
+    hasError = true;
   }
 
-  const buildData = data.build_data as BuildSelection;
-  const totalPrice = data.total_price as number;
+  const buildData = parseBuildSelection(data?.build_data);
+  if (hasError || !data || !buildData) {
+    notFound();
+  }
+
+  const totalPrice = calculateBuildPrice(buildData);
   
   // Formateo de fecha de creación (fallback por si no existiera)
   const createdAtString = data.created_at ? data.created_at : new Date().toISOString();
