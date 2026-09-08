@@ -49,23 +49,25 @@ export function ComponentCard({
             : "Sin precio"}
         </p>
 
-        {component.productUrl ? (
-          <a
-            href={component.productUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="grid gap-3">
+          <Link
+            href={`/components/${component.slug}`}
             className={buttonClassName("primary", "w-full")}
           >
-            Ver oferta
-          </a>
-        ) : (
-          <Link
-            href="/components"
-            className={buttonClassName("secondary", "w-full")}
-          >
-            Ver catálogo
+            Ver detalles
           </Link>
-        )}
+
+          {component.productUrl && (
+            <a
+              href={component.productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonClassName("secondary", "w-full")}
+            >
+              Ver oferta
+            </a>
+          )}
+        </div>
       </div>
     </article>
   );

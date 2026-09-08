@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchCatalogFromSupabase } from "@/lib/components/repository";
+import {
+  fetchCatalogFromSupabase,
+  fetchComponentBySlug,
+} from "@/lib/components/repository";
 import { getSupabasePublicClient } from "@/lib/supabaseClient";
 
 const { fromMock } = vi.hoisted(() => ({ fromMock: vi.fn() }));
@@ -167,6 +170,57 @@ describe("fetchCatalogFromSupabase", () => {
     await expect(fetchCatalogFromSupabase()).resolves.toEqual({
       success: false,
       error: "No pudimos conectar con el catálogo. Intenta nuevamente.",
+    });
+  });
+});
+
+describe("fetchComponentBySlug", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getSupabasePublicClient).mockReturnValue({ from: fromMock } as never);
+  });
+
+  function mockSlugQuery(result: unknown) {
+    const maybeSingle = vi.fn().mockResolvedValue(result);
+    const eq = vi.fn().mockReturnValue({ maybeSingle });
+    const select = vi.fn().mockReturnValue({ eq });
+    fromMock.mockReturnValue({ select });
+    return { eq };
+  }
+
+  it("carga y valida el componente por su slug permanente", async () => {
+    const { eq } = mockSlugQuery({ data: mockSupabaseProduct, error: null });
+
+    await expect(fetchComponentBySlug("test-cpu")).resolves.toEqual({
+      success: true,
+      data: expect.objectContaining({
+        id: "1",
+        slug: "test-cpu",
+        price: 299_990,
+        inStock: true,
+      }),
+    });
+    expect(eq).toHaveBeenCalledWith("slug", "test-cpu");
+  });
+
+  it("devuelve null cuando el slug no existe", async () => {
+    mockSlugQuery({ data: null, error: null });
+
+    await expect(fetchComponentBySlug("no-existe")).resolves.toEqual({
+      success: true,
+      data: null,
+    });
+  });
+
+  it("no expone errores internos al cargar un componente", async () => {
+    mockSlugQuery({
+      data: null,
+      error: { message: "sensitive database detail" },
+    });
+
+    await expect(fetchComponentBySlug("test-cpu")).resolves.toEqual({
+      success: false,
+      error: "No pudimos cargar el componente. Intenta nuevamente.",
     });
   });
 });

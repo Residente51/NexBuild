@@ -14,6 +14,10 @@ export type CatalogResult =
   | { success: true; data: PCComponent[] }
   | { success: false; error: string };
 
+export type ComponentResult =
+  | { success: true; data: PCComponent | null }
+  | { success: false; error: string };
+
 let browserCatalogRequest: Promise<CatalogResult> | null = null;
 
 async function loadCatalog(): Promise<CatalogResult> {
@@ -83,4 +87,51 @@ export function fetchCatalogFromSupabase(options?: {
   }
 
   return browserCatalogRequest;
+}
+
+/** Load one active catalog component through its permanent URL identifier. */
+export async function fetchComponentBySlug(
+  slug: string,
+): Promise<ComponentResult> {
+  if (!slug || slug.length > 200) {
+    return { success: true, data: null };
+  }
+
+  try {
+    const supabase = getSupabasePublicClient();
+    const { data, error } = await supabase
+      .from("products")
+      .select(LEGACY_PRODUCT_SELECT)
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching component from Supabase:", error);
+      return {
+        success: false,
+        error: "No pudimos cargar el componente. Intenta nuevamente.",
+      };
+    }
+
+    if (!data) {
+      return { success: true, data: null };
+    }
+
+    const component = parseProductRow(data);
+    if (!component) {
+      console.error("Component row failed domain validation");
+      return {
+        success: false,
+        error: "El componente contiene datos inválidos.",
+      };
+    }
+
+    return { success: true, data: component };
+  } catch (error) {
+    console.error("Exception fetching component:", error);
+    return {
+      success: false,
+      error: "No pudimos conectar con el catálogo. Intenta nuevamente.",
+    };
+  }
 }

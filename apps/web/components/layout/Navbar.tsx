@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const LINKS = [
-  { label: "Armar PC", href: "/builder" },
+  { label: "Inicio", href: "/" },
   { label: "Componentes", href: "/components" },
+  { label: "Armar PC", href: "/builder" },
 ];
 
 function Brand() {
@@ -31,7 +32,9 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav aria-label="Navegación principal" className="flex flex-1 flex-col gap-1 px-4 py-8">
       {LINKS.map((link) => {
-        const isCurrent = pathname === link.href;
+        const isCurrent =
+          pathname === link.href ||
+          (link.href !== "/" && pathname.startsWith(`${link.href}/`));
         return (
           <Link
             key={link.href}

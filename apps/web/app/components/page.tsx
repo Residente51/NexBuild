@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { buttonClassName } from "@/components/ui/Button";
 import { useBuildStore } from "@/store/useBuildStore";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import { CATEGORY_LABELS, ComponentCategory } from "@/lib/categories";
@@ -347,7 +349,7 @@ export default function ComponentsPage() {
                   </div>
                   
                   {/* Bottom section */}
-                  <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4">
+                  <div className="mt-6 border-t border-white/5 pt-4">
                     <span className="text-lg font-bold tabular-nums text-[#FBFEF9]">
                       {item.inStock === false
                         ? "Sin stock"
@@ -355,37 +357,49 @@ export default function ComponentsPage() {
                         ? `$${item.price.toLocaleString("es-CL")}`
                         : "Sin precio"}
                     </span>
-                    
-                    <button
-                      type="button"
-                      onClick={() => handleAdd(item)}
-                      disabled={addedItems[item.id] || item.inStock === false}
-                      className={`flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed ${
-                        item.inStock === false
-                          ? "bg-white/5 text-white/35"
-                          : addedItems[item.id]
-                          ? "bg-[#34D399]/20 text-[#34D399]"
-                          : "bg-[#0E79B2] text-white hover:bg-[#0A5C87]"
-                      }`}
-                    >
-                      {item.inStock === false ? (
-                        "No disponible"
-                      ) : addedItems[item.id] ? (
-                        <>
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                          Añadido
-                        </>
-                      ) : (
-                        <>
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                          </svg>
-                          Añadir
-                        </>
-                      )}
-                    </button>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/components/${item.slug}`}
+                        className={buttonClassName(
+                          "secondary",
+                          "w-full px-3 py-2 text-sm",
+                        )}
+                      >
+                        Ver detalles
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAdd(item)}
+                        disabled={addedItems[item.id] || item.inStock === false}
+                        className={`flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+                          item.inStock === false
+                            ? "bg-white/5 text-white/35"
+                            : addedItems[item.id]
+                            ? "bg-[#34D399]/20 text-[#34D399]"
+                            : "bg-[#0E79B2] text-white hover:bg-[#0A5C87]"
+                        }`}
+                      >
+                        {item.inStock === false ? (
+                          "No disponible"
+                        ) : addedItems[item.id] ? (
+                          <>
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                            Añadido
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            Añadir
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
