@@ -8,6 +8,7 @@ import {
   renameOwnedBuild as renameOwnedBuildRecord,
 } from "@/lib/build/savedBuilds";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 const AUTHENTICATION_ERROR = "Debes iniciar sesión para administrar tus configuraciones.";
 
@@ -43,7 +44,12 @@ export async function renameOwnedBuild(id: string, name: string) {
 export async function duplicateOwnedBuild(id: string) {
   const context = await getOwnerContext();
   if (!context) return { success: false as const, error: AUTHENTICATION_ERROR };
-  return duplicateOwnedBuildRecord(context.supabase, id, context.user.id);
+  return duplicateOwnedBuildRecord(
+    context.supabase,
+    createSupabaseAdminClient(),
+    id,
+    context.user.id,
+  );
 }
 
 export async function deleteOwnedBuild(id: string) {

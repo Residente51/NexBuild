@@ -171,6 +171,7 @@ export async function renameOwnedBuild(
 /** Duplicate only a stored snapshot selected through owner-visible RLS data. */
 export async function duplicateOwnedBuild(
   supabase: SavedBuildClient,
+  persistenceSupabase: SavedBuildClient,
   id: unknown,
   ownerId: string,
 ): Promise<SavedBuildResult<{ id: string }>> {
@@ -184,7 +185,7 @@ export async function duplicateOwnedBuild(
     return { success: false, error: "La configuración no existe." };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await persistenceSupabase
     .from("saved_builds")
     .insert({
       user_id: ownerId,

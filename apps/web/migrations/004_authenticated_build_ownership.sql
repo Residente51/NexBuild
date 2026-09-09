@@ -26,8 +26,29 @@ ALTER TABLE public.saved_builds
     )
   );
 
-ALTER TABLE public.saved_builds
-  DROP CONSTRAINT IF EXISTS saved_builds_user_id_fkey;
+DO $$
+DECLARE
+  constraint_name name;
+BEGIN
+  FOR constraint_name IN
+    SELECT constraint_row.conname
+    FROM pg_constraint AS constraint_row
+    JOIN pg_attribute AS column_row
+      ON column_row.attrelid = constraint_row.conrelid
+      AND column_row.attnum = ANY (constraint_row.conkey)
+    WHERE constraint_row.conrelid = 'public.saved_builds'::regclass
+      AND constraint_row.confrelid = 'auth.users'::regclass
+      AND constraint_row.contype = 'f'
+      AND array_length(constraint_row.conkey, 1) = 1
+      AND column_row.attname = 'user_id'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.saved_builds DROP CONSTRAINT %I',
+      constraint_name
+    );
+  END LOOP;
+END;
+$$;
 ALTER TABLE public.saved_builds
   ADD CONSTRAINT saved_builds_user_id_fkey
   FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
@@ -79,25 +100,24 @@ ALTER TABLE public.saved_builds ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can read own builds" ON public.saved_builds;
 CREATE POLICY "Users can read own builds"
   ON public.saved_builds FOR SELECT TO authenticated
-  USING (auth.uid() = user_id);
+  USING ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can insert their own builds" ON public.saved_builds;
-CREATE POLICY "Users can insert their own builds"
-  ON public.saved_builds FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update own builds" ON public.saved_builds;
 CREATE POLICY "Users can update own builds"
   ON public.saved_builds FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING ((select auth.uid()) = user_id)
+  WITH CHECK ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can delete own builds" ON public.saved_builds;
 CREATE POLICY "Users can delete own builds"
   ON public.saved_builds FOR DELETE TO authenticated
-  USING (auth.uid() = user_id);
+  USING ((select auth.uid()) = user_id);
 
 REVOKE ALL ON public.saved_builds FROM anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.saved_builds TO authenticated;
+REVOKE ALL ON public.saved_builds FROM authenticated;
+GRANT SELECT, DELETE ON public.saved_builds TO authenticated;
+GRANT UPDATE (name) ON public.saved_builds TO authenticated;
 
 COMMIT;

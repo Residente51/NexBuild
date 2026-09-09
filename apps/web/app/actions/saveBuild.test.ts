@@ -38,20 +38,21 @@ function installClient(products: unknown[], userId: string | null = null) {
   });
   const buildSelect = vi.fn().mockReturnValue({ single });
   const insert = vi.fn().mockReturnValue({ select: buildSelect });
-  const from = vi.fn((table: string) =>
+  const adminFrom = vi.fn((table: string) =>
     table === "products" ? { select: productSelect } : { insert },
   );
+  const requestFrom = vi.fn(() => ({ select: productSelect }));
   const getUser = vi.fn().mockResolvedValue({
     data: { user: userId ? { id: userId } : null },
     error: null,
   });
 
-  vi.mocked(createSupabaseAdminClient).mockReturnValue({ from } as never);
+  vi.mocked(createSupabaseAdminClient).mockReturnValue({ from: adminFrom } as never);
   vi.mocked(createServerSupabaseClient).mockResolvedValue({
     auth: { getUser },
-    ...(userId ? { from } : {}),
+    ...(userId ? { from: requestFrom } : {}),
   } as never);
-  return { from, getUser, productIn, insert };
+  return { adminFrom, requestFrom, getUser, productIn, insert };
 }
 
 describe("saveBuild", () => {
@@ -82,14 +83,16 @@ describe("saveBuild", () => {
     expect(createSupabaseAdminClient).toHaveBeenCalledOnce();
   });
 
-  it("guarda sesiones autenticadas con su propietario mediante el cliente RLS", async () => {
+  it("guarda sesiones autenticadas con su propietario mediante el cliente server-only", async () => {
     const ownerId = "11111111-1111-4111-8111-111111111111";
-    const { insert } = installClient([cpuRow], ownerId);
+    const { adminFrom, requestFrom, insert } = installClient([cpuRow], ownerId);
 
     await expect(saveBuild({ cpu: "cpu-id" })).resolves.toEqual({
       id: "build-id",
     });
-    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+    expect(createSupabaseAdminClient).toHaveBeenCalledOnce();
+    expect(requestFrom).toHaveBeenCalledWith("products");
+    expect(adminFrom).toHaveBeenCalledWith("saved_builds");
     expect(insert).toHaveBeenCalledWith({
       user_id: ownerId,
       build_data: expect.objectContaining({

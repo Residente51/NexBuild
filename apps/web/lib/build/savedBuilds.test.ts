@@ -83,7 +83,12 @@ describe("owned build repository", () => {
     const from = vi.fn().mockReturnValue({ select });
 
     await expect(
-      duplicateOwnedBuild({ from } as never, BUILD_ID, OWNER_ID),
+      duplicateOwnedBuild(
+        { from } as never,
+        { from: vi.fn() } as never,
+        BUILD_ID,
+        OWNER_ID,
+      ),
     ).resolves.toEqual({
       success: false,
       error: "La configuración guardada tiene datos inválidos.",
@@ -101,14 +106,19 @@ describe("owned build repository", () => {
     });
     const insertedSelect = vi.fn().mockReturnValue({ single: insertedSingle });
     const insert = vi.fn().mockReturnValue({ select: insertedSelect });
-    const from = vi
-      .fn()
-      .mockReturnValueOnce({ select: sourceSelect })
-      .mockReturnValueOnce({ insert });
+    const readFrom = vi.fn().mockReturnValue({ select: sourceSelect });
+    const writeFrom = vi.fn().mockReturnValue({ insert });
 
     await expect(
-      duplicateOwnedBuild({ from } as never, BUILD_ID, OWNER_ID),
+      duplicateOwnedBuild(
+        { from: readFrom } as never,
+        { from: writeFrom } as never,
+        BUILD_ID,
+        OWNER_ID,
+      ),
     ).resolves.toEqual({ success: true, data: { id: COPY_ID } });
+    expect(readFrom).toHaveBeenCalledWith("saved_builds");
+    expect(writeFrom).toHaveBeenCalledWith("saved_builds");
     expect(sourceEq).toHaveBeenCalledWith("id", BUILD_ID);
     expect(insert).toHaveBeenCalledWith({
       user_id: OWNER_ID,

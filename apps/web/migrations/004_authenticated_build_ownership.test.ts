@@ -19,14 +19,34 @@ describe("authenticated build ownership migration", () => {
     expect(migration).not.toMatch(/UPDATE public\.saved_builds\s+SET user_id/i);
   });
 
-  it("defines owner-only CRUD and no anonymous table access", () => {
+  it("keeps owner access while restricting canonical writes to the server", () => {
     expect(migration).toContain("FOR SELECT TO authenticated");
-    expect(migration).toContain("FOR INSERT TO authenticated");
+    expect(migration).not.toContain("FOR INSERT TO authenticated");
     expect(migration).toContain("FOR UPDATE TO authenticated");
     expect(migration).toContain("FOR DELETE TO authenticated");
-    expect(migration.match(/auth\.uid\(\) = user_id/g)).toHaveLength(5);
+    expect(migration.match(/\(select auth\.uid\(\)\) = user_id/g)).toHaveLength(4);
     expect(migration).toContain("REVOKE ALL ON public.saved_builds FROM anon");
+    expect(migration).toContain(
+      "REVOKE ALL ON public.saved_builds FROM authenticated",
+    );
+    expect(migration).toContain(
+      "GRANT SELECT, DELETE ON public.saved_builds TO authenticated",
+    );
+    expect(migration).toContain(
+      "GRANT UPDATE (name) ON public.saved_builds TO authenticated",
+    );
+    expect(migration).not.toMatch(/GRANT[^;]*\bINSERT\b[^;]*TO authenticated/i);
+    expect(migration).not.toMatch(/GRANT UPDATE ON public\.saved_builds/i);
     expect(migration).not.toMatch(/GRANT .*saved_builds TO anon/i);
+  });
+
+  it("replaces the user foreign key without assuming its generated name", () => {
+    expect(migration).toContain("FROM pg_constraint AS constraint_row");
+    expect(migration).toContain("column_row.attname = 'user_id'");
+    expect(migration).toContain("constraint_row.confrelid = 'auth.users'::regclass");
+    expect(migration).not.toContain(
+      "DROP CONSTRAINT IF EXISTS saved_builds_user_id_fkey",
+    );
   });
 
   it("prevents ownership reassignment and maintains updated_at", () => {

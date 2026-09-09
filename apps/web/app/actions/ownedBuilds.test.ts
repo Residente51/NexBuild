@@ -7,10 +7,15 @@ import {
   renameOwnedBuild,
 } from "./ownedBuilds";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import * as repository from "@/lib/build/savedBuilds";
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabaseClient: vi.fn(),
+}));
+
+vi.mock("@/lib/supabaseAdmin", () => ({
+  createSupabaseAdminClient: vi.fn(),
 }));
 
 vi.mock("@/lib/build/savedBuilds", () => ({
@@ -75,6 +80,8 @@ describe("owned build actions", () => {
       },
     };
     vi.mocked(createServerSupabaseClient).mockResolvedValue(client as never);
+    const adminClient = { from: vi.fn() };
+    vi.mocked(createSupabaseAdminClient).mockReturnValue(adminClient as never);
     vi.mocked(repository.duplicateOwnedBuild).mockResolvedValue({
       success: true,
       data: { id: BUILD_ID },
@@ -86,6 +93,7 @@ describe("owned build actions", () => {
     });
     expect(repository.duplicateOwnedBuild).toHaveBeenCalledWith(
       client,
+      adminClient,
       BUILD_ID,
       OWNER_ID,
     );

@@ -96,8 +96,8 @@ export async function saveBuild(
     const {
       data: { user },
     } = await requestSupabase.auth.getUser();
-    // Authenticated writes stay on the request client so owner RLS is enforced.
-    // Anonymous shared saves retain the existing server-only service-role path.
+    // Catalog reads stay request-scoped for authenticated users. Canonical writes
+    // use the server-only client because authenticated table inserts are revoked.
     const supabase = user ? requestSupabase : createSupabaseAdminClient();
     const uniqueIds = [...new Set(normalized.ids)];
     const productResult = await supabase
@@ -164,7 +164,8 @@ export async function saveBuild(
       build.storage.push(component);
     }
 
-    const { data, error } = await supabase
+    const persistenceSupabase = user ? createSupabaseAdminClient() : supabase;
+    const { data, error } = await persistenceSupabase
       .from("saved_builds")
       .insert({
         ...(user ? { user_id: user.id } : {}),
