@@ -19,25 +19,45 @@ describe("authenticated build ownership migration", () => {
     expect(migration).not.toMatch(/UPDATE public\.saved_builds\s+SET user_id/i);
   });
 
-  it("keeps owner access while restricting canonical writes to the server", () => {
+  it("removes every legacy policy before creating only owner policies", () => {
+    expect(migration).toContain("FROM pg_catalog.pg_policies AS policy_row");
+    expect(migration).toContain("policy_row.schemaname = 'public'");
+    expect(migration).toContain("policy_row.tablename = 'saved_builds'");
+    expect(migration).toContain(
+      "'DROP POLICY IF EXISTS %I ON public.saved_builds'",
+    );
+
+    const policies = migration.match(/CREATE POLICY[^;]+;/g) ?? [];
+    expect(policies).toHaveLength(3);
+    expect(policies.join("\n")).toContain('"Users can read own builds"');
+    expect(policies.join("\n")).toContain('"Users can update own builds"');
+    expect(policies.join("\n")).toContain('"Users can delete own builds"');
     expect(migration).toContain("FOR SELECT TO authenticated");
     expect(migration).not.toContain("FOR INSERT TO authenticated");
     expect(migration).toContain("FOR UPDATE TO authenticated");
     expect(migration).toContain("FOR DELETE TO authenticated");
     expect(migration.match(/\(select auth\.uid\(\)\) = user_id/g)).toHaveLength(4);
-    expect(migration).toContain("REVOKE ALL ON public.saved_builds FROM anon");
-    expect(migration).toContain(
-      "REVOKE ALL ON public.saved_builds FROM authenticated",
+  });
+
+  it("normalizes legacy grants to the exact authenticated privilege set", () => {
+    expect(migration).toMatch(
+      /REVOKE ALL PRIVILEGES ON TABLE public\.saved_builds\s+FROM PUBLIC, anon, authenticated;/,
     );
-    expect(migration).toContain(
-      "GRANT SELECT, DELETE ON public.saved_builds TO authenticated",
+    expect(migration).toMatch(
+      /REVOKE ALL PRIVILEGES\s+\(id, user_id, build_data, total_price, created_at, name, updated_at\)\s+ON TABLE public\.saved_builds\s+FROM PUBLIC, anon, authenticated;/,
     );
+
+    const authenticatedGrants = (
+      migration.match(/GRANT\s+[^;]+\s+TO authenticated;/g) ?? []
+    ).map((statement) => statement.replace(/\s+/g, " "));
+    expect(authenticatedGrants).toEqual([
+      "GRANT SELECT, DELETE ON TABLE public.saved_builds TO authenticated;",
+      "GRANT UPDATE (name) ON TABLE public.saved_builds TO authenticated;",
+    ]);
+    expect(migration).not.toMatch(/GRANT\s+[^;]+\s+TO (?:PUBLIC|anon);/i);
     expect(migration).toContain(
-      "GRANT UPDATE (name) ON public.saved_builds TO authenticated",
+      "GRANT SELECT, INSERT ON TABLE public.saved_builds TO service_role;",
     );
-    expect(migration).not.toMatch(/GRANT[^;]*\bINSERT\b[^;]*TO authenticated/i);
-    expect(migration).not.toMatch(/GRANT UPDATE ON public\.saved_builds/i);
-    expect(migration).not.toMatch(/GRANT .*saved_builds TO anon/i);
   });
 
   it("replaces the user foreign key without assuming its generated name", () => {

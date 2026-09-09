@@ -97,27 +97,46 @@ CREATE TRIGGER prevent_saved_build_ownership_reassignment
 
 ALTER TABLE public.saved_builds ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can read own builds" ON public.saved_builds;
+DO $$
+DECLARE
+  policy_name name;
+BEGIN
+  FOR policy_name IN
+    SELECT policy_row.policyname
+    FROM pg_catalog.pg_policies AS policy_row
+    WHERE policy_row.schemaname = 'public'
+      AND policy_row.tablename = 'saved_builds'
+  LOOP
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON public.saved_builds',
+      policy_name
+    );
+  END LOOP;
+END;
+$$;
+
 CREATE POLICY "Users can read own builds"
   ON public.saved_builds FOR SELECT TO authenticated
   USING ((select auth.uid()) = user_id);
 
-DROP POLICY IF EXISTS "Users can insert their own builds" ON public.saved_builds;
-
-DROP POLICY IF EXISTS "Users can update own builds" ON public.saved_builds;
 CREATE POLICY "Users can update own builds"
   ON public.saved_builds FOR UPDATE TO authenticated
   USING ((select auth.uid()) = user_id)
   WITH CHECK ((select auth.uid()) = user_id);
 
-DROP POLICY IF EXISTS "Users can delete own builds" ON public.saved_builds;
 CREATE POLICY "Users can delete own builds"
   ON public.saved_builds FOR DELETE TO authenticated
   USING ((select auth.uid()) = user_id);
 
-REVOKE ALL ON public.saved_builds FROM anon;
-REVOKE ALL ON public.saved_builds FROM authenticated;
-GRANT SELECT, DELETE ON public.saved_builds TO authenticated;
-GRANT UPDATE (name) ON public.saved_builds TO authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.saved_builds
+  FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES
+  (id, user_id, build_data, total_price, created_at, name, updated_at)
+  ON TABLE public.saved_builds
+  FROM PUBLIC, anon, authenticated;
+
+GRANT SELECT, INSERT ON TABLE public.saved_builds TO service_role;
+GRANT SELECT, DELETE ON TABLE public.saved_builds TO authenticated;
+GRANT UPDATE (name) ON TABLE public.saved_builds TO authenticated;
 
 COMMIT;
