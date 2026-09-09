@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { logout } from "@/app/auth/actions";
 
 const LINKS = [
   { label: "Inicio", href: "/" },
@@ -56,21 +57,45 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({
+  isAuthenticated,
+  onNavigate,
+}: {
+  isAuthenticated: boolean;
+  onNavigate?: () => void;
+}) {
   return (
     <>
       <div className="flex h-20 items-center px-6">
         <Brand />
       </div>
       <NavigationLinks onNavigate={onNavigate} />
-      <div className="p-6">
+      <div className="space-y-4 p-6">
+        {isAuthenticated ? (
+          <form action={logout}>
+            <button
+              type="submit"
+              className="min-h-11 w-full rounded-xl border border-white/10 px-4 text-left text-sm font-medium text-white/70 hover:bg-white/5 hover:text-[#38BDF8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
+            >
+              Cerrar sesión
+            </button>
+          </form>
+        ) : (
+          <Link
+            href="/login"
+            onClick={onNavigate}
+            className="flex min-h-11 items-center rounded-xl border border-white/10 px-4 text-sm font-medium text-white/70 hover:bg-white/5 hover:text-[#38BDF8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
+          >
+            Iniciar sesión
+          </Link>
+        )}
         <p className="text-xs text-white/40">© 2026 NexBuild</p>
       </div>
     </>
   );
 }
 
-export function Navbar() {
+export function Navbar({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -130,7 +155,7 @@ export function Navbar() {
       </header>
 
       <aside className="sticky left-0 top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-white/10 bg-[#191923] md:flex">
-        <SidebarContent />
+        <SidebarContent isAuthenticated={isAuthenticated} />
       </aside>
 
       {isOpen && (
@@ -158,7 +183,10 @@ export function Navbar() {
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>
             </button>
-            <SidebarContent onNavigate={() => setIsOpen(false)} />
+            <SidebarContent
+              isAuthenticated={isAuthenticated}
+              onNavigate={() => setIsOpen(false)}
+            />
           </aside>
         </div>
       )}

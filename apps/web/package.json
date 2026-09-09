@@ -19,6 +19,7 @@
     "catalog:images": "node scripts/fix-product-images.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.112.3",
     "next": "16.2.12",
     "react": "19.2.4",

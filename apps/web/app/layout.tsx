@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Navbar } from "@/components/layout/Navbar";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,11 +26,16 @@ export const metadata: Metadata = {
 // A request-scoped CSP nonce requires dynamic rendering.
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html
       lang="es-CL"
@@ -42,7 +48,7 @@ export default function RootLayout({
         >
           Saltar al contenido principal
         </a>
-        <Navbar />
+        <Navbar isAuthenticated={Boolean(user)} />
         <main
           id="main-content"
           tabIndex={-1}
