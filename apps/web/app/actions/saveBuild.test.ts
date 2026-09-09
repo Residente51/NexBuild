@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveBuild } from "./saveBuild";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabaseClient: vi.fn(),
+}));
 
 vi.mock("@/lib/supabaseAdmin", () => ({
   createSupabaseAdminClient: vi.fn(),
@@ -22,7 +27,7 @@ const cpuRow = {
   store_listings: [{ price_cash: 100_000, in_stock: true }],
 };
 
-function installClient(products: unknown[]) {
+function installClient(products: unknown[], userId: string | null = null) {
   const productEq = vi.fn().mockResolvedValue({ data: products, error: null });
   const productIn = vi.fn().mockReturnValue({ eq: productEq });
   const productSelect = vi.fn().mockReturnValue({ in: productIn });
@@ -36,9 +41,17 @@ function installClient(products: unknown[]) {
   const from = vi.fn((table: string) =>
     table === "products" ? { select: productSelect } : { insert },
   );
+  const getUser = vi.fn().mockResolvedValue({
+    data: { user: userId ? { id: userId } : null },
+    error: null,
+  });
 
   vi.mocked(createSupabaseAdminClient).mockReturnValue({ from } as never);
-  return { from, productIn, insert };
+  vi.mocked(createServerSupabaseClient).mockResolvedValue({
+    auth: { getUser },
+    ...(userId ? { from } : {}),
+  } as never);
+  return { from, getUser, productIn, insert };
 }
 
 describe("saveBuild", () => {
@@ -49,9 +62,10 @@ describe("saveBuild", () => {
       error: "Agrega al menos un componente antes de guardar.",
     });
     expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+    expect(createServerSupabaseClient).not.toHaveBeenCalled();
   });
 
-  it("consulta solo IDs seleccionados y guarda un snapshot validado", async () => {
+  it("conserva el guardado anónimo sin asignar propietario", async () => {
     const { productIn, insert } = installClient([cpuRow]);
 
     await expect(saveBuild({ cpu: "cpu-id" })).resolves.toEqual({
@@ -65,6 +79,39 @@ describe("saveBuild", () => {
       }),
       total_price: 100_000,
     });
+    expect(createSupabaseAdminClient).toHaveBeenCalledOnce();
+  });
+
+  it("guarda sesiones autenticadas con su propietario mediante el cliente RLS", async () => {
+    const ownerId = "11111111-1111-4111-8111-111111111111";
+    const { insert } = installClient([cpuRow], ownerId);
+
+    await expect(saveBuild({ cpu: "cpu-id" })).resolves.toEqual({
+      id: "build-id",
+    });
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+    expect(insert).toHaveBeenCalledWith({
+      user_id: ownerId,
+      build_data: expect.objectContaining({
+        cpu: expect.objectContaining({ id: "cpu-id", category: "cpu" }),
+        storage: [],
+      }),
+      total_price: 100_000,
+    });
+  });
+
+  it("rechaza identidad y precios enviados por el cliente", async () => {
+    await expect(
+      saveBuild({
+        cpu: "cpu-id",
+        user_id: "attacker",
+        total_price: 1,
+      } as never),
+    ).resolves.toEqual({
+      error: "La configuración contiene campos desconocidos.",
+    });
+    expect(createServerSupabaseClient).not.toHaveBeenCalled();
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
   });
 
   it("rechaza IDs que ya no existen", async () => {

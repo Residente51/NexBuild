@@ -1,6 +1,5 @@
-import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { calculateBuildPrice } from "@/lib/build/totals";
-import { parseBuildSelection } from "@/lib/components/validation";
+import { readSharedBuild } from "@/lib/build/sharedBuilds";
 import { notFound } from "next/navigation";
 import LoadBuildButton from "@/components/builder/LoadBuildButton";
 import { CATEGORY_LABELS } from "@/lib/categories";
@@ -13,35 +12,19 @@ export default async function SharedBuildPage({
 }) {
   const { id } = await params;
   
-  let data: {
-    build_data: unknown;
-    created_at: string | null;
-  } | null = null;
-  let hasError = false;
-
-  try {
-    const supabase = createSupabaseAdminClient();
-    const result = await supabase
-      .from("saved_builds")
-      .select("build_data, created_at")
-      .eq("id", id)
-      .single();
-    data = result.data;
-    hasError = Boolean(result.error);
-  } catch (error) {
-    console.error("Unable to load shared build:", error);
-    hasError = true;
-  }
-
-  const buildData = parseBuildSelection(data?.build_data);
-  if (hasError || !data || !buildData) {
+  const sharedBuild = await readSharedBuild(id);
+  if (!sharedBuild) {
     notFound();
   }
+
+  const buildData = sharedBuild.build;
 
   const totalPrice = calculateBuildPrice(buildData);
   
   // Formateo de fecha de creación (fallback por si no existiera)
-  const createdAtString = data.created_at ? data.created_at : new Date().toISOString();
+  const createdAtString = sharedBuild.createdAt
+    ? sharedBuild.createdAt
+    : new Date().toISOString();
   const createdAt = new Date(createdAtString).toLocaleDateString("es-CL", {
     year: "numeric",
     month: "long",

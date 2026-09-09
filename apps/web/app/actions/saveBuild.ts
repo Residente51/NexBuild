@@ -6,6 +6,7 @@ import {
   parseProductRow,
   PRODUCT_SELECT,
 } from "@/lib/components/validation";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import type { BuildSelection, PCComponent } from "@/types/component";
 
@@ -83,7 +84,7 @@ function resolveComponent(
   return component?.category === category ? component : null;
 }
 
-/** Save an anonymous build after resolving every ID against the trusted catalog. */
+/** Save a build after resolving every ID against the trusted server-side catalog. */
 export async function saveBuild(
   componentIds: BuildComponentIds,
 ): Promise<{ id: string } | { error: string }> {
@@ -91,7 +92,13 @@ export async function saveBuild(
   if (!normalized.success) return { error: normalized.error };
 
   try {
-    const supabase = createSupabaseAdminClient();
+    const requestSupabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await requestSupabase.auth.getUser();
+    // Authenticated writes stay on the request client so owner RLS is enforced.
+    // Anonymous shared saves retain the existing server-only service-role path.
+    const supabase = user ? requestSupabase : createSupabaseAdminClient();
     const uniqueIds = [...new Set(normalized.ids)];
     const productResult = await supabase
       .from("products")
@@ -160,6 +167,7 @@ export async function saveBuild(
     const { data, error } = await supabase
       .from("saved_builds")
       .insert({
+        ...(user ? { user_id: user.id } : {}),
         build_data: build,
         total_price: calculateBuildPrice(build),
       })
