@@ -1,29 +1,20 @@
 "use client";
 
-/**
- * Sticky sidebar panel that shows:
- * - Total estimated price (formatted as CLP).
- * - Compatibility status with issue details.
- * - Copy-to-clipboard build export.
- */
-
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { CATEGORY_LABELS } from "@/lib/categories";
-import { useBuildStore } from "@/store/useBuildStore";
 import type { ComponentCategory } from "@/lib/categories";
+import type { BuildProgress } from "@/lib/build/progress";
+import { useBuildStore } from "@/store/useBuildStore";
 import type {
   BuildCompatibilityReport,
   BuildSelection,
+  CompatibilityIssue,
   CompatibilityStatus,
 } from "@/types/component";
 
-// ---------------------------------------------------------------------------
-// Status visual config
-// ---------------------------------------------------------------------------
-
 const STATUS_LABELS: Record<CompatibilityStatus, string> = {
   compatible: "Compatible",
-  warning: "Con Advertencias",
+  warning: "Con advertencias",
   incompatible: "Incompatible",
   incomplete: "Incompleto",
 };
@@ -58,11 +49,36 @@ const STATUS_CONFIG: Record<
   },
 };
 
-// ---------------------------------------------------------------------------
-// Build text generator
-// ---------------------------------------------------------------------------
+const ISSUE_GROUPS: Array<{
+  status: CompatibilityIssue["status"];
+  label: string;
+  colorClass: string;
+  dotClass: string;
+  surfaceClass: string;
+}> = [
+  {
+    status: "incompatible",
+    label: "Errores de compatibilidad",
+    colorClass: "text-builder-danger",
+    dotClass: "bg-builder-danger",
+    surfaceClass: "border-builder-danger/20 bg-builder-danger/5",
+  },
+  {
+    status: "warning",
+    label: "Advertencias",
+    colorClass: "text-builder-warning",
+    dotClass: "bg-builder-warning",
+    surfaceClass: "border-builder-warning/20 bg-builder-warning/5",
+  },
+  {
+    status: "incomplete",
+    label: "Partes o datos pendientes",
+    colorClass: "text-white/70",
+    dotClass: "bg-white/40",
+    surfaceClass: "border-white/10 bg-white/[0.03]",
+  },
+];
 
-/** Order in which single-slot categories appear in the export. */
 const EXPORT_SLOT_ORDER: Exclude<keyof BuildSelection, "storage">[] = [
   "cpu",
   "motherboard",
@@ -84,12 +100,16 @@ function generateBuildText(
     const component = build[slot];
     const label = CATEGORY_LABELS[slot as ComponentCategory];
     if (component) {
-      lines.push(`${label}: ${component.name} - $${component.price.toLocaleString("es-CL")}`);
+      lines.push(
+        `${label}: ${component.name} - $${component.price.toLocaleString("es-CL")}`,
+      );
     }
   }
 
   for (const device of build.storage) {
-    lines.push(`Almacenamiento: ${device.name} - $${device.price.toLocaleString("es-CL")}`);
+    lines.push(
+      `Almacenamiento: ${device.name} - $${device.price.toLocaleString("es-CL")}`,
+    );
   }
 
   lines.push("");
@@ -99,14 +119,11 @@ function generateBuildText(
   return lines.join("\n");
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 interface BuildSummaryPanelProps {
   build: BuildSelection;
   totalPrice: number;
   report: BuildCompatibilityReport;
+  progress: BuildProgress;
   onClearBuild: () => void;
   hasComponents: boolean;
 }
@@ -115,29 +132,53 @@ export function BuildSummaryPanel({
   build,
   totalPrice,
   report,
+  progress,
   onClearBuild,
   hasComponents,
 }: BuildSummaryPanelProps) {
   const [copied, setCopied] = useState(false);
-
-  const saveBuildToCloud = useBuildStore((state) => state.saveBuildToCloud);
   const [isSaving, setIsSaving] = useState(false);
   const [savedUrlCopied, setSavedUrlCopied] = useState(false);
   const [savedUrl, setSavedUrl] = useState<string | null>(null);
   const [savedBuildSignature, setSavedBuildSignature] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const saveBuildToCloud = useBuildStore((state) => state.saveBuildToCloud);
 
   const statusCfg = STATUS_CONFIG[report.status];
   const buildSignature = [
     ...EXPORT_SLOT_ORDER.map((slot) => build[slot]?.id ?? ""),
     ...build.storage.map((component) => component.id),
   ].join("|");
+  const groupedIssues = ISSUE_GROUPS.map((group) => ({
+    ...group,
+    issues: report.issues.filter((issue) => issue.status === group.status),
+  })).filter((group) => group.issues.length > 0);
+
+  const psuWattage = build.psu?.specs?.wattage;
+  const psuLoadPercentage = psuWattage
+    ? Math.round((report.totalWattageEstimated / psuWattage) * 100)
+    : null;
+  const psuHeadroom = psuWattage
+    ? psuWattage - report.totalWattageEstimated
+    : null;
+  const powerIssue = report.issues.find((issue) =>
+    [
+      "PSU_WATTAGE_EXCEEDED",
+      "PSU_BELOW_GPU_RECOMMENDATION",
+      "PSU_WATTAGE_TIGHT",
+    ].includes(issue.code),
+  );
+  const isReady =
+    progress.isComplete &&
+    report.status !== "incomplete" &&
+    report.status !== "incompatible";
 
   const handleCopy = useCallback(async () => {
     try {
       setActionError(null);
-      const text = generateBuildText(build, totalPrice, report.status);
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(
+        generateBuildText(build, totalPrice, report.status),
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -179,173 +220,244 @@ export function BuildSummaryPanel({
   };
 
   return (
-    <aside
-      id="build-summary-panel"
-      className="sticky top-6 space-y-6"
-    >
-      {/* Price card */}
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <p className="text-xs font-medium tracking-wide text-white/60 uppercase">
-          Total estimado
+    <aside id="build-summary-panel" className="sticky top-6 space-y-5">
+      <div
+        role="status"
+        className={`rounded-xl border p-5 ${
+          isReady
+            ? "border-builder-success/30 bg-builder-success/10"
+            : report.status === "incompatible"
+              ? "border-builder-danger/30 bg-builder-danger/10"
+              : "border-white/10 bg-white/5"
+        }`}
+      >
+        <p
+          className={`text-sm font-bold ${
+            isReady
+              ? "text-builder-success"
+              : report.status === "incompatible"
+                ? "text-builder-danger"
+                : "text-builder-text"
+          }`}
+        >
+          {isReady
+            ? report.status === "warning"
+              ? "Armado completo con advertencias"
+              : "Armado completo y compatible"
+            : report.status === "incompatible"
+              ? "El armado requiere ajustes"
+              : progress.isComplete
+                ? "Faltan datos para validar el armado"
+                : "Armado en progreso"}
         </p>
-        <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums text-[#FBFEF9]">
-          ${totalPrice.toLocaleString("es-CL")}
-        </p>
-        <p className="mt-4 text-xs text-white/60">
-          Consumo estimado: ~{report.totalWattageEstimated}W
+        <p className="mt-1 text-xs leading-relaxed text-white/55">
+          {isReady
+            ? "Ya puedes guardar y compartir esta configuración."
+            : progress.missingCategories.length > 0
+              ? `Faltan ${progress.missingCategories.length} ${
+                  progress.missingCategories.length === 1
+                    ? "parte requerida"
+                    : "partes requeridas"
+                }.`
+              : "Revisa las incidencias antes de compartir la configuración."}
         </p>
       </div>
 
+      <div className="rounded-xl border border-[#0E79B2]/30 bg-[#0E79B2]/10 p-6">
+        <p className="text-xs font-semibold tracking-wide text-[#7DD3FC] uppercase">
+          Total estimado
+        </p>
+        <p className="mt-2 text-4xl font-black tracking-tight tabular-nums text-[#FBFEF9]">
+          ${totalPrice.toLocaleString("es-CL")}
+        </p>
+        <p className="mt-1 text-xs text-white/45">CLP</p>
+      </div>
+
+      <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+        <p className="text-xs font-semibold tracking-wide text-white/60 uppercase">
+          Energía estimada
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-white/45">Consumo</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-builder-text">
+              ~{report.totalWattageEstimated}W
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-white/45">Fuente</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-builder-text">
+              {psuWattage ? `${psuWattage}W` : "Pendiente"}
+            </p>
+          </div>
+        </div>
+
+        {psuLoadPercentage != null && psuHeadroom != null ? (
+          <>
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"
+              role="meter"
+              aria-label="Uso estimado de la capacidad de la fuente"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.min(psuLoadPercentage, 100)}
+            >
+              <div
+                className={`h-full rounded-full ${
+                  powerIssue?.status === "incompatible"
+                    ? "bg-builder-danger"
+                    : powerIssue?.status === "warning"
+                      ? "bg-builder-warning"
+                      : "bg-builder-success"
+                }`}
+                style={{ width: `${Math.min(psuLoadPercentage, 100)}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3 text-xs text-white/50">
+              <span>{psuLoadPercentage}% de carga estimada</span>
+              <span className="tabular-nums">
+                {psuHeadroom >= 0
+                  ? `${psuHeadroom}W de margen`
+                  : `${Math.abs(psuHeadroom)}W de déficit`}
+              </span>
+            </div>
+            {build.gpu?.specs?.recommendedPsuWattage ? (
+              <p className="mt-3 text-xs text-white/50">
+                Recomendación de la GPU: {build.gpu.specs.recommendedPsuWattage}W.
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="mt-4 text-xs leading-relaxed text-white/50">
+            Selecciona una fuente con potencia informada para ver el margen disponible.
+          </p>
+        )}
+      </div>
+
       {actionError && (
-        <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+        <p
+          role="alert"
+          className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200"
+        >
           {actionError}
         </p>
       )}
 
-      {/* Compatibility card */}
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <p className="mb-4 text-xs font-medium tracking-wide text-white/60 uppercase">
-          Compatibilidad
-        </p>
-
-        {/* Status badge */}
-        <div
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5
-                      text-xs font-semibold ${statusCfg.bgClass} ${statusCfg.borderClass}`}
-        >
-          <span className={`inline-block h-2 w-2 rounded-full ${statusCfg.dotClass}`} />
-          <span className="text-builder-text">{statusCfg.label}</span>
+      <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-semibold tracking-wide text-white/60 uppercase">
+            Compatibilidad
+          </p>
+          <div
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${statusCfg.bgClass} ${statusCfg.borderClass}`}
+          >
+            <span className={`inline-block h-2 w-2 rounded-full ${statusCfg.dotClass}`} />
+            <span className="text-builder-text">{statusCfg.label}</span>
+          </div>
         </div>
 
-        {/* Issues list */}
-        {report.issues.length > 0 && (
-          <ul className="mt-4 space-y-2.5">
-            {report.issues.map((issue) => (
-              <li
-                key={issue.code}
-                className="flex items-start gap-2.5 text-xs leading-relaxed"
+        {groupedIssues.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {groupedIssues.map((group) => (
+              <section
+                key={group.status}
+                aria-labelledby={`compatibility-${group.status}`}
+                className={`rounded-lg border p-3 ${group.surfaceClass}`}
               >
-                <span
-                  className={`mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-                    issue.status === "incompatible"
-                      ? "bg-builder-danger"
-                      : issue.status === "warning"
-                        ? "bg-builder-warning"
-                        : "bg-white/30"
-                  }`}
-                />
-                <span className="text-white/60">{issue.message}</span>
-              </li>
+                <h3
+                  id={`compatibility-${group.status}`}
+                  className={`text-xs font-bold ${group.colorClass}`}
+                >
+                  {group.label} ({group.issues.length})
+                </h3>
+                <ul className="mt-2 space-y-2">
+                  {group.issues.map((issue) => (
+                    <li
+                      key={issue.code}
+                      className="flex items-start gap-2 text-xs leading-relaxed text-white/60"
+                    >
+                      <span
+                        className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${group.dotClass}`}
+                      />
+                      <span>{issue.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
-        )}
-
-        {/* Empty state */}
-        {report.issues.length === 0 && hasComponents && (
-          <p className="mt-3 text-xs text-builder-success/80">
-            Todos los componentes seleccionados son compatibles entre sí.
+          </div>
+        ) : hasComponents ? (
+          <p className="mt-4 text-xs leading-relaxed text-builder-success">
+            No se detectaron problemas entre los componentes seleccionados.
+          </p>
+        ) : (
+          <p className="mt-4 text-xs leading-relaxed text-white/50">
+            Agrega componentes para comenzar la validación.
           </p>
         )}
       </div>
 
-      {/* Copy build */}
       {hasComponents && (
-        <button
-          type="button"
-          onClick={handleCopy}
-          aria-live="polite"
-          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl
-                     px-4 py-2.5 text-sm font-medium transition-colors
-                     ${
-                       copied
-                         ? "bg-builder-success/10 text-builder-success"
-                         : "bg-[#0E79B2] text-[#FBFEF9] hover:bg-[#0A5C87]"
-                     }`}
-        >
-          {copied ? (
-            <>
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              ¡Copiado! ✓
-            </>
-          ) : (
-            <>
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-              </svg>
-              Copiar configuración
-            </>
-          )}
-        </button>
-      )}
-
-      {savedUrl && savedBuildSignature === buildSignature && (
-        <div className="rounded-xl border border-builder-success/30 bg-builder-success/10 p-4" role="status">
-          <p className="text-xs font-medium text-builder-success">
-            Enlace compartible creado
-          </p>
-          <a
-            href={savedUrl}
-            className="mt-2 block break-all text-xs text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
+        <>
+          <button
+            type="button"
+            onClick={handleSaveToCloud}
+            disabled={isSaving}
+            className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-colors disabled:cursor-wait disabled:opacity-50 ${
+              savedUrlCopied
+                ? "bg-builder-success/15 text-builder-success"
+                : isReady
+                  ? "bg-[#0E79B2] text-[#FBFEF9] hover:bg-[#0A5C87]"
+                  : "border border-white/20 bg-white/5 text-[#FBFEF9] hover:bg-white/10"
+            }`}
           >
-            {savedUrl}
-          </a>
-        </div>
-      )}
+            {isSaving
+              ? "Guardando..."
+              : savedUrlCopied
+                ? "¡Enlace copiado!"
+                : isReady
+                  ? "Guardar y compartir armado"
+                  : "Guardar avance en la nube"}
+          </button>
 
-      {/* Save to cloud */}
-      {hasComponents && (
-        <button
-          type="button"
-          onClick={handleSaveToCloud}
-          disabled={isSaving}
-          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border
-                     px-4 py-2.5 text-sm font-medium transition-colors
-                     ${
-                       savedUrlCopied
-                         ? "border-builder-success/30 bg-builder-success/10 text-builder-success"
-                         : "border-white/20 bg-transparent text-[#FBFEF9] hover:bg-white/5 disabled:opacity-50"
-                     }`}
-        >
-          {isSaving ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <circle cx="12" cy="12" r="10" strokeWidth="4" className="opacity-25" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Guardando...
-            </>
-          ) : savedUrlCopied ? (
-            <>
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              ¡Enlace copiado! ✓
-            </>
-          ) : (
-            <>
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-              </svg>
-              Guardar en la nube
-            </>
+          {savedUrl && savedBuildSignature === buildSignature && (
+            <div
+              className="rounded-xl border border-builder-success/30 bg-builder-success/10 p-4"
+              role="status"
+            >
+              <p className="text-xs font-medium text-builder-success">
+                Enlace compartible creado
+              </p>
+              <a
+                href={savedUrl}
+                className="mt-2 block break-all text-xs text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
+              >
+                {savedUrl}
+              </a>
+            </div>
           )}
-        </button>
-      )}
 
-      {/* Clear build */}
-      {hasComponents && (
-        <button
-          type="button"
-          onClick={onClearBuild}
-          className="min-h-11 w-full rounded-xl border border-white/10 bg-white/5
-                     px-4 py-2.5 text-sm font-medium text-white/60
-                     transition-colors hover:border-builder-danger/40
-                     hover:text-builder-danger"
-        >
-          Limpiar configuración
-        </button>
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-live="polite"
+            className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+              copied
+                ? "border-builder-success/30 bg-builder-success/10 text-builder-success"
+                : "border-white/15 bg-transparent text-white/70 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            {copied ? "¡Configuración copiada!" : "Copiar configuración"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClearBuild}
+            className="min-h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/60 transition-colors hover:border-builder-danger/40 hover:text-builder-danger"
+          >
+            Limpiar configuración
+          </button>
+        </>
       )}
     </aside>
   );

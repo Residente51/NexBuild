@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
+import { getBuildProgress } from "@/lib/build/progress";
 import type { ComponentCategory } from "@/lib/categories";
 import type { BuildSelection, StorageComponent } from "@/types/component";
 import { SlotRow } from "./SlotRow";
@@ -136,6 +137,7 @@ export function PCBuilderView() {
 
   const report = getCompatibilityReport();
   const totalPrice = getTotalPrice();
+  const progress = getBuildProgress(build);
 
   // Check if at least one component is selected
   const hasComponents =
@@ -158,6 +160,56 @@ export function PCBuilderView() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left — Slots (Main Bento Box) */}
         <div className="col-span-12 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/20 lg:col-span-8 lg:p-8">
+          <div className="mb-6 rounded-2xl border border-white/10 bg-black/10 p-5">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold tracking-wide text-white/60 uppercase">
+                  Progreso del armado
+                </p>
+                <p className="mt-1 text-lg font-bold text-builder-text">
+                  {progress.completed} de {progress.total} partes requeridas
+                </p>
+              </div>
+              <span className="text-2xl font-black tabular-nums text-[#38BDF8]">
+                {progress.percentage}%
+              </span>
+            </div>
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"
+              role="progressbar"
+              aria-label="Progreso del armado"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress.percentage}
+            >
+              <div
+                className={`h-full rounded-full transition-[width] duration-300 ${
+                  progress.isComplete ? "bg-builder-success" : "bg-[#0E79B2]"
+                }`}
+                style={{ width: `${progress.percentage}%` }}
+              />
+            </div>
+            {progress.missingCategories.length > 0 ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-white/50">Falta agregar:</span>
+                {progress.missingCategories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => openCatalog(category)}
+                    className="min-h-11 rounded-full border border-builder-warning/25 bg-builder-warning/10 px-3 text-xs font-semibold text-builder-warning transition-colors hover:border-builder-warning/50 hover:bg-builder-warning/15"
+                  >
+                    {CATEGORY_LABELS[category]}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm font-medium text-builder-success">
+                Todas las partes requeridas están seleccionadas.
+              </p>
+            )}
+          </div>
+
           <div className="space-y-4">
             {/* Single-slot categories */}
             {SINGLE_SLOTS.map((category) => (
@@ -165,13 +217,47 @@ export function PCBuilderView() {
                 key={category}
                 category={category as ComponentCategory}
                 component={build[category] ?? undefined}
+                isRequired={progress.requiredCategories.includes(category)}
                 onSelect={() => openCatalog(category)}
                 onRemove={() => removeComponent(category)}
               />
             ))}
 
             {/* Storage — array-based */}
-            <div className="space-y-3">
+            <div
+              id="slot-storage"
+              className={`space-y-3 rounded-2xl border p-4 ${
+                build.storage.length === 0
+                  ? "border-white/15 bg-white/[0.07]"
+                  : "border-white/10 bg-black/10"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-white/60 uppercase">
+                    Almacenamiento
+                  </p>
+                  <p className="mt-1 text-sm text-white/50">
+                    {build.storage.length === 0
+                      ? "Falta una unidad para completar el equipo."
+                      : `${build.storage.length} ${
+                          build.storage.length === 1
+                            ? "unidad seleccionada"
+                            : "unidades seleccionadas"
+                        }`}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                    build.storage.length === 0
+                      ? "bg-builder-warning/10 text-builder-warning"
+                      : "bg-builder-success/10 text-builder-success"
+                  }`}
+                >
+                  {build.storage.length === 0 ? "Requerido" : "Seleccionado"}
+                </span>
+              </div>
+
               {build.storage.map((device, index) => (
                 <StorageRow
                   key={`${device.id}-${index}`}
@@ -219,6 +305,7 @@ export function PCBuilderView() {
             build={build}
             totalPrice={totalPrice}
             report={report}
+            progress={progress}
             onClearBuild={clearBuild}
             hasComponents={hasComponents}
           />

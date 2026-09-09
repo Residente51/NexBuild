@@ -30,6 +30,7 @@ const CATEGORY_ICONS: Record<ComponentCategory, string> = {
 interface SlotRowProps {
   category: ComponentCategory;
   component: PCComponent | undefined;
+  isRequired: boolean;
   onSelect: () => void;
   onRemove: () => void;
 }
@@ -37,6 +38,7 @@ interface SlotRowProps {
 export function SlotRow({
   category,
   component,
+  isRequired,
   onSelect,
   onRemove,
 }: SlotRowProps) {
@@ -46,9 +48,12 @@ export function SlotRow({
   return (
     <div
       id={`slot-${category}`}
-      className="group flex items-center gap-4 rounded-xl border border-white/10
-                 bg-white/5 p-4 transition-colors duration-200
-                 hover:border-[#0E79B2]/40"
+      className={`group flex items-center gap-4 rounded-xl border p-4
+                  transition-colors duration-200 hover:border-[#0E79B2]/40 ${
+                    !component && isRequired
+                      ? "border-white/15 bg-white/[0.07]"
+                      : "border-white/10 bg-white/5"
+                  }`}
     >
       {/* Icon */}
       <div
@@ -69,21 +74,34 @@ export function SlotRow({
       </div>
 
       {/* Content */}
-      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         {component ? (
           <>
             <div className="min-w-0">
-              <p className="text-xs font-medium tracking-wide text-white/60 uppercase">
-                {label}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-medium tracking-wide text-white/60 uppercase">
+                  {label}
+                </p>
+                <span className="rounded-full bg-builder-success/10 px-2 py-0.5 text-[10px] font-semibold text-builder-success">
+                  Seleccionado
+                </span>
+              </div>
               <p className="truncate text-sm font-semibold text-[#FBFEF9]">
                 {component.name}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-3">
-              <span className="text-sm font-semibold text-[#0E79B2]">
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="hidden text-sm font-semibold tabular-nums text-[#38BDF8] sm:inline">
                 ${component.price.toLocaleString("es-CL")}
               </span>
+              <button
+                type="button"
+                onClick={onSelect}
+                aria-label={`Reemplazar ${label}`}
+                className="min-h-11 rounded-lg border border-white/15 px-3 text-xs font-semibold text-white/70 transition-colors hover:border-[#0E79B2]/60 hover:text-[#38BDF8]"
+              >
+                Reemplazar
+              </button>
               <button
                 type="button"
                 onClick={onRemove}
@@ -105,7 +123,18 @@ export function SlotRow({
                        py-1 text-sm text-builder-muted transition-colors
                        hover:text-builder-accent"
           >
-            <span className="font-medium">+ Elegir {label}</span>
+            <span className="flex flex-wrap items-center gap-2 text-left font-medium">
+              + Elegir {label}
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  isRequired
+                    ? "bg-builder-warning/10 text-builder-warning"
+                    : "bg-white/5 text-white/45"
+                }`}
+              >
+                {isRequired ? "Requerido" : "Opcional"}
+              </span>
+            </span>
             <svg
               className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100"
               viewBox="0 0 24 24"
