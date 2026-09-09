@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { CompareButton } from "@/components/compare/CompareButton";
 import { buttonClassName } from "@/components/ui/Button";
 import { useBuildStore } from "@/store/useBuildStore";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
@@ -399,6 +400,11 @@ export default function ComponentsPage() {
                           </>
                         )}
                       </button>
+
+                      <CompareButton
+                        component={item}
+                        className="col-span-2"
+                      />
                     </div>
                   </div>
                 </div>

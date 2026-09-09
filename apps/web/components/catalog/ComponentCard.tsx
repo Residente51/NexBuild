@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { CompareButton } from "@/components/compare/CompareButton";
 import { buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { PCComponent } from "@/types/component";
@@ -67,6 +68,8 @@ export function ComponentCard({
               Ver oferta
             </a>
           )}
+
+          <CompareButton component={component} />
         </div>
       </div>
     </article>
