@@ -98,22 +98,22 @@ function parseOwnedBuild(value: unknown): OwnedBuild | null {
 /** List only rows visible to the authenticated request under owner RLS. */
 export async function listOwnedBuilds(
   supabase: SavedBuildClient,
-): Promise<SavedBuildResult<OwnedBuildSummary[]>> {
+): Promise<SavedBuildResult<OwnedBuild[]>> {
   const { data, error } = await supabase
     .from("saved_builds")
-    .select("id, name, total_price, created_at, updated_at")
+    .select("id, name, build_data, total_price, created_at, updated_at")
     .order("updated_at", { ascending: false });
 
   if (error || !data) {
     return { success: false, error: "No pudimos cargar tus configuraciones." };
   }
 
-  const builds = data.map(parseSummary);
+  const builds = data.map(parseOwnedBuild);
   if (builds.some((build) => build === null)) {
     return { success: false, error: "Una configuración guardada tiene datos inválidos." };
   }
 
-  return { success: true, data: builds as OwnedBuildSummary[] };
+  return { success: true, data: builds as OwnedBuild[] };
 }
 
 /** Read one exact build through the authenticated owner's RLS visibility. */

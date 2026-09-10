@@ -12,6 +12,12 @@ const LINKS = [
   { label: "Armar PC", href: "/builder" },
 ];
 
+const AUTHENTICATED_LINKS = [{ label: "Mis armados", href: "/builds" }];
+
+export function getNavigationLinks(isAuthenticated: boolean) {
+  return isAuthenticated ? [...LINKS, ...AUTHENTICATED_LINKS] : LINKS;
+}
+
 function Brand() {
   return (
     <Link
@@ -28,12 +34,19 @@ function Brand() {
   );
 }
 
-function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavigationLinks({
+  isAuthenticated,
+  onNavigate,
+}: {
+  isAuthenticated: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
+  const links = getNavigationLinks(isAuthenticated);
 
   return (
     <nav aria-label="Navegación principal" className="flex flex-1 flex-col gap-1 px-4 py-8">
-      {LINKS.map((link) => {
+      {links.map((link) => {
         const isCurrent =
           pathname === link.href ||
           (link.href !== "/" && pathname.startsWith(`${link.href}/`));
@@ -69,7 +82,10 @@ function SidebarContent({
       <div className="flex h-20 items-center px-6">
         <Brand />
       </div>
-      <NavigationLinks onNavigate={onNavigate} />
+      <NavigationLinks
+        isAuthenticated={isAuthenticated}
+        onNavigate={onNavigate}
+      />
       <div className="space-y-4 p-6">
         {isAuthenticated ? (
           <form action={logout}>

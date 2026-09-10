@@ -52,13 +52,15 @@ describe("owned build repository", () => {
           totalPrice: 1,
           createdAt: NOW,
           updatedAt: NOW,
+          build: { cpu, storage: [] },
         },
       ],
     });
     expect(from).toHaveBeenCalledWith("saved_builds");
     expect(select).toHaveBeenCalledWith(
-      "id, name, total_price, created_at, updated_at",
+      "id, name, build_data, total_price, created_at, updated_at",
     );
+    expect(order).toHaveBeenCalledWith("updated_at", { ascending: false });
   });
 
   it("lee un ID exacto y valida el snapshot almacenado", async () => {
