@@ -23,6 +23,39 @@ const component: PCComponent = {
 };
 
 describe("CatalogItemCard actions", () => {
+  it("muestra un fallback intencional por categoría cuando falta la imagen", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CatalogItemCard, {
+        component,
+        isAdded: false,
+        onAdd: vi.fn(),
+      }),
+    );
+
+    expect(markup).toContain("CPU");
+    expect(markup).toContain("Procesador");
+    expect(markup).toContain("AMD");
+  });
+
+  it("renderiza la imagen disponible sin recortarla", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CatalogItemCard, {
+        component: {
+          ...component,
+          image: "https://example.com/ryzen.png",
+        },
+        isAdded: false,
+        onAdd: vi.fn(),
+        prioritizeImage: true,
+      }),
+    );
+
+    expect(markup).toContain('src="https://example.com/ryzen.png"');
+    expect(markup).toContain('alt="Ryzen 7 7700 de AMD"');
+    expect(markup).toContain('loading="eager"');
+    expect(markup).toContain("object-contain");
+  });
+
   it("preserva detalle, comparar, agregar al builder y oferta externa", () => {
     const markup = renderToStaticMarkup(
       createElement(CatalogItemCard, {

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CompareButton } from "@/components/compare/CompareButton";
 import { buttonClassName } from "@/components/ui/Button";
-import { CATEGORY_LABELS } from "@/lib/categories";
+import { CATEGORY_LABELS, type ComponentCategory } from "@/lib/categories";
 import { getCatalogSpecBadges } from "@/lib/components/catalog";
 import type { PCComponent } from "@/types/component";
 
@@ -13,12 +13,54 @@ interface CatalogItemCardProps {
   component: PCComponent;
   isAdded: boolean;
   onAdd: (component: PCComponent) => void;
+  prioritizeImage?: boolean;
+}
+
+const CATEGORY_MARKS: Record<ComponentCategory, string> = {
+  cpu: "CPU",
+  gpu: "GPU",
+  ram: "RAM",
+  storage: "SSD",
+  motherboard: "MB",
+  case: "CASE",
+  cooler: "COOL",
+  psu: "PSU",
+};
+
+function CatalogImageFallback({ component }: { component: PCComponent }) {
+  return (
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(14,121,178,0.18),transparent_55%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-8 bottom-5 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+      />
+
+      <div className="relative flex flex-col items-center text-center">
+        <div className="flex h-16 min-w-16 items-center justify-center rounded-2xl border border-[#38BDF8]/20 bg-[#38BDF8]/10 px-3 shadow-[0_12px_36px_rgba(0,0,0,0.28)]">
+          <span className="text-sm font-black tracking-[0.16em] text-sky-200">
+            {CATEGORY_MARKS[component.category]}
+          </span>
+        </div>
+        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">
+          {CATEGORY_LABELS[component.category]}
+        </p>
+        <p className="mt-1 text-xs font-medium text-white/35">
+          {component.brand}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function CatalogItemCard({
   component,
   isAdded,
   onAdd,
+  prioritizeImage = false,
 }: CatalogItemCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const specs = getCatalogSpecBadges(component);
@@ -27,26 +69,22 @@ export function CatalogItemCard({
   return (
     <article className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 transition-[transform,border-color,box-shadow] duration-150 motion-reduce:transition-none motion-reduce:hover:transform-none hover:-translate-y-1 hover:border-[#0E79B2]/50 hover:shadow-lg hover:shadow-black/20">
       <div>
-        <div className="mb-4 flex h-36 w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-white/5">
+        <div className="relative mb-5 h-48 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#111119] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:h-52">
           {component.image && !imageFailed ? (
-            <Image
-              src={component.image}
-              alt={`${component.name} de ${component.brand}`}
-              width={144}
-              height={144}
-              unoptimized
-              className="h-full w-full object-contain p-2 transition-transform duration-150 motion-reduce:transition-none group-hover:scale-105 motion-reduce:group-hover:scale-100"
-              onError={() => setImageFailed(true)}
-            />
+            <div className="relative h-full w-full">
+              <Image
+                src={component.image}
+                alt={`${component.name} de ${component.brand}`}
+                fill
+                sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                unoptimized
+                loading={prioritizeImage ? "eager" : "lazy"}
+                className="object-contain p-1 drop-shadow-[0_16px_24px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out motion-reduce:transition-none group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
+                onError={() => setImageFailed(true)}
+              />
+            </div>
           ) : (
-            <>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                {CATEGORY_LABELS[component.category]}
-              </span>
-              <span className="mt-1 text-xs font-medium text-zinc-500">
-                {component.brand}
-              </span>
-            </>
+            <CatalogImageFallback component={component} />
           )}
         </div>
 
