@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Arquitectura actual de NexBuild",
+    "quality_profile": "showcase",
+    "viewBox": [1240, 600],
+    "repository": {
+      "url": "https://github.com/Residente51/NexBuild",
+      "provider": "github",
+      "revision": "8cd99b2f1b4d6030afa5b3e6906473551f99762b"
+    },
+    "views": [
+      {
+        "id": "catalog-runtime",
+        "label": "Flujo del catalogo",
+        "focus": ["visitor", "next-proxy", "root-layout", "catalog-route", "catalog-ui", "catalog-repository", "supabase-catalog"],
+        "note": "Solicitud, render inicial, consulta validada y catalogo interactivo."
+      },
+      {
+        "id": "product-detail",
+        "label": "Detalle por slug",
+        "focus": ["catalog-ui", "detail-route", "catalog-repository", "supabase-catalog"],
+        "note": "La URL permanente usa /components/[slug], no un id."
+      },
+      {
+        "id": "product-images",
+        "label": "Imagenes de producto",
+        "focus": ["supabase-catalog", "catalog-repository", "catalog-ui", "image-resolution", "local-assets", "image-fallback"],
+        "note": "products.image_url entrega una ruta local o HTTPS; la UI usa fallback cuando corresponde."
+      },
+      {
+        "id": "catalog-maintenance",
+        "label": "Mantenimiento",
+        "focus": ["hardware-json", "image-tooling", "local-assets", "supabase-catalog"],
+        "note": "Herramientas ejecutadas por desarrollo, fuera de las solicitudes de produccion."
+      }
+    ]
+  },
+  "components": [
+    { "id": "visitor", "type": "external", "label": "Usuario", "sublabel": "Navegador", "pos": [20, 150], "size": [150, 64] },
+    { "id": "next-proxy", "type": "security", "label": "proxy.ts", "sublabel": "CSP + refresh auth", "sources": [{ "path": "apps/web/proxy.ts", "line": 23, "end_line": 89, "label": "CSP y cookies" }], "pos": [210, 150], "size": [150, 64] },
+    { "id": "root-layout", "type": "backend", "label": "RootLayout", "sublabel": "Server Component + Navbar", "sources": [{ "path": "apps/web/app/layout.tsx", "line": 28, "end_line": 55, "label": "Layout raiz" }], "pos": [400, 150], "size": [150, 64] },
+    { "id": "landing", "type": "frontend", "label": "Landing /", "sublabel": "Hero + destacados", "sources": [{ "path": "apps/web/app/page.tsx", "line": 1, "end_line": 41, "label": "Landing actual" }], "pos": [400, 280], "size": [150, 64] },
+    { "id": "catalog-route", "type": "backend", "label": "/components", "sublabel": "Carga inicial (server)", "sources": [{ "path": "apps/web/app/components/page.tsx", "line": 1, "end_line": 9, "label": "Pagina de catalogo" }], "pos": [590, 150], "size": [150, 64] },
+    { "id": "catalog-ui", "type": "frontend", "label": "CatalogView + cards", "sublabel": "Busqueda + filtros", "sources": [{ "path": "apps/web/components/catalog/CatalogView.tsx", "line": 1, "end_line": 151, "label": "Catalogo cliente" }, { "path": "apps/web/lib/components/catalog.ts", "line": 65, "end_line": 225, "label": "Filtros y busqueda" }], "pos": [590, 280], "size": [170, 64] },
+    { "id": "detail-route", "type": "backend", "label": "/components/[slug]", "sublabel": "Lookup por slug", "sources": [{ "path": "apps/web/app/components/[slug]/page.tsx", "line": 1, "end_line": 22, "label": "Ruta por slug" }, { "path": "apps/web/components/catalog/ComponentDetailView.tsx", "line": 1, "end_line": 61, "label": "Vista de detalle" }], "pos": [800, 150], "size": [170, 64] },
+    { "id": "catalog-repository", "type": "backend", "label": "Catalog repository", "sublabel": "Anon client + validacion", "sources": [{ "path": "apps/web/lib/components/repository.ts", "line": 23, "end_line": 136, "label": "Consultas de catalogo" }, { "path": "apps/web/lib/components/validation.ts", "line": 257, "end_line": 290, "label": "Mapeo validado" }, { "path": "apps/web/lib/supabaseClient.ts", "line": 1, "end_line": 22, "label": "Cliente publico" }], "pos": [800, 280], "size": [170, 64] },
+    { "id": "supabase-catalog", "type": "database", "label": "Supabase catalogo", "sublabel": "products + store_listings", "brand": "supabase", "sources": [{ "path": "apps/web/migrations/002_stabilize_schema_and_sharing.sql", "line": 8, "end_line": 41, "label": "Tablas de catalogo" }, { "path": "apps/web/lib/components/validation.ts", "line": 6, "end_line": 9, "label": "Columnas consultadas" }], "pos": [1010, 280], "size": [180, 64] },
+    { "id": "auth-stack", "type": "security", "label": "Supabase SSR Auth", "sublabel": "Cookies + sesion", "brand": "supabase", "sources": [{ "path": "apps/web/lib/supabase/server.ts", "line": 1, "end_line": 22, "label": "Cliente SSR" }, { "path": "apps/web/proxy.ts", "line": 64, "end_line": 89, "label": "Refresh de sesion" }, { "path": "apps/web/app/layout.tsx", "line": 34, "end_line": 37, "label": "Usuario del layout" }], "pos": [400, 20], "size": [150, 64] },
+    { "id": "zustand-state", "type": "frontend", "label": "Zustand + localStorage", "sublabel": "Build + comparacion", "sources": [{ "path": "apps/web/store/useBuildStore.ts", "line": 90, "end_line": 161, "label": "Build persistido" }, { "path": "apps/web/store/useComparisonStore.ts", "line": 68, "end_line": 109, "label": "Comparacion persistida" }], "pos": [400, 400], "size": [170, 64] },
+    { "id": "image-resolution", "type": "frontend", "label": "Resolucion de imagen", "sublabel": "image_url local / HTTPS", "sources": [{ "path": "apps/web/lib/components/validation.ts", "line": 54, "end_line": 67, "label": "Fuentes permitidas" }, { "path": "apps/web/lib/components/validation.ts", "line": 275, "end_line": 289, "label": "image_url a image" }], "pos": [590, 400], "size": [170, 64] },
+    { "id": "image-fallback", "type": "frontend", "label": "Fallback visual", "sublabel": "Ausente o error", "sources": [{ "path": "apps/web/components/catalog/CatalogItemCard.tsx", "line": 30, "end_line": 88, "label": "Fallback de tarjeta" }, { "path": "apps/web/components/catalog/ComponentDetailView.tsx", "line": 34, "end_line": 56, "label": "Fallback de detalle" }, { "path": "apps/web/components/catalog/ComponentCard.tsx", "line": 17, "end_line": 36, "label": "Fallback de landing" }], "pos": [800, 510], "size": [170, 64] },
+    { "id": "local-assets", "type": "cloud", "label": "Assets locales", "sublabel": "public/images/components", "sources": [{ "path": "apps/web/scripts/download-component-images.mjs", "line": 15, "end_line": 17, "label": "Directorio de assets" }], "pos": [590, 510], "size": [170, 64] },
+    { "id": "hardware-json", "type": "database", "label": "hardware.json", "sublabel": "Migracion legacy", "sources": [{ "path": "apps/web/scripts/migrate-to-supabase.mjs", "line": 26, "end_line": 35, "label": "Lectura para migracion" }, { "path": "apps/web/data/hardware.json", "line": 1, "label": "Datos legacy" }], "pos": [30, 510], "size": [150, 64] },
+    { "id": "image-tooling", "type": "backend", "label": "Tooling de catalogo", "sublabel": "Migracion + imagenes", "sources": [{ "path": "apps/web/scripts/catalog-image-sources.mjs", "line": 1, "end_line": 22, "label": "Fuentes verificadas" }, { "path": "apps/web/scripts/download-component-images.mjs", "line": 1, "end_line": 17, "label": "Solo mantenimiento" }, { "path": "apps/web/scripts/download-component-images.mjs", "line": 71, "end_line": 102, "label": "Materializacion local" }], "pos": [220, 510], "size": [150, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Desarrollo / mantenimiento", "wraps": ["hardware-json", "image-tooling"], "pad": 22 }
+  ],
+  "connections": [
+    { "id": "request-through-proxy", "from": "visitor", "to": "next-proxy", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "proxy-to-layout", "from": "next-proxy", "to": "root-layout", "label": "nonce", "labelAt": [380, 230] },
+    { "id": "layout-to-catalog", "from": "root-layout", "to": "catalog-route", "label": "App Router", "labelAt": [570, 125] },
+    { "id": "catalog-to-ui", "from": "catalog-route", "to": "catalog-ui", "label": "initialResult", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [665, 250] },
+    { "id": "ui-to-repository", "from": "catalog-ui", "to": "catalog-repository", "label": "fetch / retry", "labelAt": [780, 370] },
+    { "id": "repository-to-data", "from": "catalog-repository", "to": "supabase-catalog", "label": "products + listings + image_url", "variant": "emphasis", "labelAt": [990, 250] },
+    { "id": "layout-to-landing", "from": "root-layout", "to": "landing", "label": "render /", "labelAt": [475, 250] },
+    { "id": "ui-to-detail", "from": "catalog-ui", "to": "detail-route", "label": "Link slug" },
+    { "id": "detail-to-repository", "from": "detail-route", "to": "catalog-repository", "label": "eq(slug)", "labelAt": [885, 250] },
+    { "id": "layout-to-auth", "from": "root-layout", "to": "auth-stack", "label": "getUser()", "variant": "security" },
+    { "id": "proxy-to-auth", "from": "next-proxy", "to": "auth-stack", "label": "getClaims + cookies", "variant": "security" },
+    { "id": "ui-to-zustand", "from": "catalog-ui", "to": "zustand-state", "label": "anadir / comparar" },
+    { "id": "ui-to-image-resolution", "from": "catalog-ui", "to": "image-resolution", "label": "PCComponent.image", "labelAt": [675, 375] },
+    { "id": "resolution-to-local", "from": "image-resolution", "to": "local-assets", "label": "/images/...", "labelAt": [675, 488] },
+    { "id": "resolution-to-fallback", "from": "image-resolution", "to": "image-fallback", "label": "ausente o error" },
+    { "id": "hardware-to-migration", "from": "hardware-json", "to": "image-tooling", "label": "catalog:migrate", "variant": "dashed", "labelAt": [200, 585] },
+    { "id": "tooling-to-assets", "from": "image-tooling", "to": "local-assets", "label": "--write SVG", "variant": "dashed" },
+    { "id": "tooling-to-data", "from": "image-tooling", "to": "supabase-catalog", "label": "service role", "variant": "dashed", "fromSide": "bottom", "toSide": "right", "via": [[295, 590], [1215, 590], [1215, 312]], "labelAt": [1145, 580] }
+  ]
+}
