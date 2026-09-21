@@ -12,11 +12,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { getBuildProgress } from "@/lib/build/progress";
+import { countBuildComponents } from "@/lib/build/totals";
 import type { ComponentCategory } from "@/lib/categories";
 import type { BuildSelection, StorageComponent } from "@/types/component";
 import { SlotRow } from "./SlotRow";
 import { BuildSummaryPanel } from "./BuildSummaryPanel";
 import { CatalogModal } from "./CatalogModal";
+import { ComponentThumbnail } from "./ComponentThumbnail";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 
 // ---------------------------------------------------------------------------
@@ -51,23 +53,7 @@ function StorageRow({
                  bg-white/5 p-4 transition-colors duration-200
                  hover:border-[#0E79B2]/40"
     >
-      {/* Icon */}
-      <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center
-                    rounded-lg bg-white/5"
-      >
-        <svg
-          className="h-5 w-5 text-builder-muted"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2H4zm14 10a1 1 0 100 2 1 1 0 000-2zm-3 0a1 1 0 100 2 1 1 0 000-2z" />
-        </svg>
-      </div>
+      <ComponentThumbnail component={device} />
 
       <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
         <div className="min-w-0">
@@ -77,6 +63,16 @@ function StorageRow({
           <p className="truncate text-sm font-semibold text-[#FBFEF9]">
             {device.name}
           </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
+            <span>{device.brand}</span>
+            <span>
+              {device.inStock === true
+                ? "Disponible"
+                : device.inStock === false
+                  ? "Sin stock"
+                  : "Stock no informado"}
+            </span>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <span className="text-sm font-semibold text-[#0E79B2]">
@@ -138,11 +134,10 @@ export function PCBuilderView() {
   const report = getCompatibilityReport();
   const totalPrice = getTotalPrice();
   const progress = getBuildProgress(build);
+  const selectedCount = countBuildComponents(build);
 
   // Check if at least one component is selected
-  const hasComponents =
-    SINGLE_SLOTS.some((cat) => build[cat] != null) ||
-    build.storage.length > 0;
+  const hasComponents = selectedCount > 0;
 
   return (
     <section id="pc-builder" className="mx-auto max-w-7xl">
@@ -304,6 +299,7 @@ export function PCBuilderView() {
           <BuildSummaryPanel
             build={build}
             totalPrice={totalPrice}
+            selectedCount={selectedCount}
             report={report}
             progress={progress}
             onClearBuild={clearBuild}

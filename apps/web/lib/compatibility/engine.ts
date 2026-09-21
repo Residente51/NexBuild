@@ -29,7 +29,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
   // Essential components missing
   if (!build.cpu) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["cpu"],
       message: "Se requiere un procesador (CPU) para evaluar compatibilidad.",
       code: "MISSING_CPU",
@@ -38,7 +38,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (!build.motherboard) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["motherboard"],
       message: "Se requiere una placa madre para evaluar compatibilidad.",
       code: "MISSING_MOTHERBOARD",
@@ -47,7 +47,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (!build.psu) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["psu"],
       message: "Se requiere una fuente de poder para evaluar el consumo del sistema.",
       code: "MISSING_PSU",
@@ -56,7 +56,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (!build.ram) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["ram"],
       message: "Se requiere memoria RAM para completar el equipo.",
       code: "MISSING_RAM",
@@ -65,7 +65,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (build.storage.length === 0) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["storage"],
       message: "Se requiere al menos una unidad de almacenamiento.",
       code: "MISSING_STORAGE",
@@ -74,7 +74,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (!build.case) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["case"],
       message: "Se requiere un gabinete para validar dimensiones y montaje.",
       code: "MISSING_CASE",
@@ -87,7 +87,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
     !build.gpu
   ) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["cpu", "gpu"],
       message: "El procesador no tiene gráficos integrados; agrega una tarjeta gráfica.",
       code: "MISSING_GRAPHICS_OUTPUT",
@@ -100,7 +100,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
     !build.cooler
   ) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["cpu", "cooler"],
       message: "El procesador no incluye refrigeración; agrega un cooler compatible.",
       code: "MISSING_CPU_COOLER",
@@ -110,7 +110,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
   // Check critical specs are present for evaluation
   if (build.cpu && (!build.cpu.specs?.socket || build.cpu.specs.socket === "")) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["cpu"],
       message: "El procesador no tiene especificaciones de socket definidas.",
       code: "MISSING_CPU_SOCKET",
@@ -119,7 +119,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (build.motherboard && (!build.motherboard.specs?.socket || build.motherboard.specs.socket === "")) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["motherboard"],
       message: "La placa madre no tiene especificaciones de socket definidas.",
       code: "MISSING_MB_SOCKET",
@@ -128,7 +128,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (build.motherboard && !build.motherboard.specs?.formFactor) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["motherboard"],
       message: "La placa madre no tiene especificaciones de factor de forma definidas.",
       code: "MISSING_MB_FORMFACTOR",
@@ -137,16 +137,25 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (build.ram && !build.ram.specs?.ramType) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["ram"],
       message: "La RAM no tiene especificaciones de tipo definidas.",
       code: "MISSING_RAM_TYPE",
     });
   }
 
+  if (build.motherboard && !build.motherboard.specs?.ramType) {
+    issues.push({
+      status: "unknown",
+      componentCategories: ["motherboard"],
+      message: "La placa madre no tiene especificaciones de tipo de RAM definidas.",
+      code: "MISSING_MB_RAM_TYPE",
+    });
+  }
+
   if (build.psu && (!build.psu.specs?.wattage || build.psu.specs.wattage === 0)) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["psu"],
       message: "La fuente no tiene especificaciones de wattage definidas.",
       code: "MISSING_PSU_WATTAGE",
@@ -155,7 +164,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (build.gpu && !build.gpu.specs) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["gpu"],
       message: "La tarjeta gráfica no tiene especificaciones dimensionales o eléctricas.",
       code: "MISSING_GPU_SPECS",
@@ -164,7 +173,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (build.case && !build.case.specs) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["case"],
       message: "El gabinete no tiene especificaciones de compatibilidad.",
       code: "MISSING_CASE_SPECS",
@@ -173,7 +182,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 
   if (build.cooler && !build.cooler.specs) {
     issues.push({
-      status: "incomplete",
+      status: "unknown",
       componentCategories: ["cooler"],
       message: "El cooler no tiene especificaciones de montaje.",
       code: "MISSING_COOLER_SPECS",
@@ -183,7 +192,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
   for (const storage of build.storage) {
     if (!storage.specs) {
       issues.push({
-        status: "incomplete",
+        status: "unknown",
         componentCategories: ["storage"],
         message: `La unidad ${storage.name} no tiene especificaciones de interfaz.`,
         code: `MISSING_STORAGE_SPECS_${storage.id}`,
@@ -197,7 +206,7 @@ const checkBuildCompleteness: CompatibilityRule = (build) => {
 /** CPU ↔ Motherboard — socket must match. */
 const checkCpuMotherboardSocket: CompatibilityRule = (build) => {
   const { cpu, motherboard } = build;
-  if (!cpu?.specs || !motherboard?.specs) return [];
+  if (!cpu?.specs?.socket || !motherboard?.specs?.socket) return [];
 
   if (cpu.specs.socket !== motherboard.specs.socket) {
     return [
@@ -215,7 +224,7 @@ const checkCpuMotherboardSocket: CompatibilityRule = (build) => {
 /** RAM ↔ Motherboard — DDR generation must match. */
 const checkRamMotherboardType: CompatibilityRule = (build) => {
   const { ram, motherboard } = build;
-  if (!ram?.specs || !motherboard?.specs) return [];
+  if (!ram?.specs?.ramType || !motherboard?.specs?.ramType) return [];
 
   if (ram.specs.ramType !== motherboard.specs.ramType) {
     return [
@@ -471,25 +480,15 @@ const checkPsuWattage: CompatibilityRule = (build) => {
   return [];
 };
 
-// ---------------------------------------------------------------------------
-// Wattage estimation helper
-// ---------------------------------------------------------------------------
-
-/**
- * Conservative wattage estimate based on real component data.
- * Sums actual power draw from all present components without fixed assumptions.
- */
+/** Conservative wattage estimate based on the selected component data. */
 export function estimateTotalWattage(build: BuildSelection): number {
   let watts = 0;
 
-  // CPU TDP — most reliable spec for power draw
   const cpu = build.cpu as CPUComponent | undefined;
   if (cpu?.specs?.tdp) {
     watts += cpu.specs.tdp;
   }
 
-  // GPU — prefer measured board power from the catalog. Older enriched rows
-  // expose it as `tdp`; the recommendation is only a conservative fallback.
   const gpu = build.gpu as GPUComponent | undefined;
   if (gpu?.specs) {
     const boardPower = gpu.specs.powerDraw ?? gpu.specs.tdp;
@@ -500,36 +499,19 @@ export function estimateTotalWattage(build: BuildSelection): number {
     }
   }
 
-  // Motherboard — small fixed draw, only if present
-  if (build.motherboard) {
-    watts += 30; // typical chipset + VRM + peripherals
+  if (build.motherboard) watts += 30;
+  if (build.ram?.specs?.modules) watts += build.ram.specs.modules * 3;
+  watts += build.storage.length * 5;
+
+  if (build.cooler?.specs?.type === "aio") {
+    watts += 15;
+  } else if (build.cooler?.specs?.type === "air") {
+    watts += 5;
   }
 
-  // RAM — minimal draw per module
-  const ram = build.ram;
-  if (ram?.specs?.modules) {
-    watts += ram.specs.modules * 3; // ~3W per module
-  }
+  if (build.case) watts += 10;
 
-  // Storage — minimal draw per device
-  if (build.storage && build.storage.length > 0) {
-    watts += build.storage.length * 5; // ~5W per storage device
-  }
-
-  // Cooler — add if liquid cooled (pump + fans)
-  const cooler = build.cooler;
-  if (cooler?.specs?.type === "aio") {
-    watts += 15; // pump + fans
-  } else if (cooler?.specs?.type === "air") {
-    watts += 5; // fans only
-  }
-
-  // Case — minimal draw for fans
-  if (build.case) {
-    watts += 10; // case fans
-  }
-
-  return Math.max(watts, 50); // minimum 50W for any system
+  return Math.max(watts, 50);
 }
 
 // ---------------------------------------------------------------------------
@@ -580,7 +562,7 @@ export function evaluateBuild(
 
 function deriveOverallStatus(issues: CompatibilityIssue[]): CompatibilityStatus {
   if (issues.some((i) => i.status === "incompatible")) return "incompatible";
-  if (issues.some((i) => i.status === "incomplete")) return "incomplete";
+  if (issues.some((i) => i.status === "unknown")) return "unknown";
   if (issues.some((i) => i.status === "warning")) return "warning";
   return "compatible";
 }

@@ -16,3 +16,17 @@ export function calculateBuildPrice(build: BuildSelection): number {
     singleSlotTotal,
   );
 }
+
+export function countBuildComponents(build: BuildSelection): number {
+  const singleSlotCount = [
+    build.cpu,
+    build.motherboard,
+    build.ram,
+    build.gpu,
+    build.case,
+    build.cooler,
+    build.psu,
+  ].filter(Boolean).length;
+
+  return singleSlotCount + build.storage.length;
+}
