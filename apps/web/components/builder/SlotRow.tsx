@@ -11,6 +11,7 @@
 import type { ComponentCategory } from "@/lib/categories";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { PCComponent } from "@/types/component";
+import { ComponentThumbnail } from "./ComponentThumbnail";
 
 // ---------------------------------------------------------------------------
 // Category icons (inline SVG paths for zero dependencies)
@@ -55,23 +56,23 @@ export function SlotRow({
                       : "border-white/10 bg-white/5"
                   }`}
     >
-      {/* Icon */}
-      <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center
-                    rounded-lg bg-white/5"
-      >
-        <svg
-          className="h-5 w-5 text-builder-muted"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d={iconPath} />
-        </svg>
-      </div>
+      {component ? (
+        <ComponentThumbnail component={component} />
+      ) : (
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
+          <svg
+            className="h-5 w-5 text-builder-muted"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d={iconPath} />
+          </svg>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex min-w-0 flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -89,9 +90,19 @@ export function SlotRow({
               <p className="truncate text-sm font-semibold text-[#FBFEF9]">
                 {component.name}
               </p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
+                <span>{component.brand}</span>
+                <span>
+                  {component.inStock === true
+                    ? "Disponible"
+                    : component.inStock === false
+                      ? "Sin stock"
+                      : "Stock no informado"}
+                </span>
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className="hidden text-sm font-semibold tabular-nums text-[#38BDF8] sm:inline">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold tabular-nums text-[#38BDF8]">
                 ${component.price.toLocaleString("es-CL")}
               </span>
               <button

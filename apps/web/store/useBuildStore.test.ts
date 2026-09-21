@@ -15,6 +15,49 @@ describe("useBuildStore", () => {
     useBuildStore.getState().clearBuild();
   });
 
+  it("agrega un componente", () => {
+    useBuildStore.getState().setComponent("cpu", cpuRyzen7_7700X);
+
+    expect(useBuildStore.getState().build.cpu).toEqual(cpuRyzen7_7700X);
+  });
+
+  it("reemplaza un componente del mismo slot", () => {
+    const replacement = {
+      ...cpuRyzen7_7700X,
+      id: "cpu-replacement",
+      name: "CPU de reemplazo",
+    };
+
+    useBuildStore.getState().setComponent("cpu", cpuRyzen7_7700X);
+    useBuildStore.getState().setComponent("cpu", replacement);
+
+    expect(useBuildStore.getState().build.cpu).toEqual(replacement);
+  });
+
+  it("elimina un componente", () => {
+    useBuildStore.getState().setComponent("cpu", cpuRyzen7_7700X);
+    useBuildStore.getState().removeComponent("cpu");
+
+    expect(useBuildStore.getState().build.cpu).toBeUndefined();
+  });
+
+  it("limpia el build completo", () => {
+    useBuildStore.getState().setComponent("cpu", cpuRyzen7_7700X);
+    useBuildStore.getState().addStorage(storageNvme);
+    useBuildStore.getState().clearBuild();
+
+    expect(useBuildStore.getState().build).toEqual({ storage: [] });
+  });
+
+  it("calcula el precio total de los componentes seleccionados", () => {
+    useBuildStore.getState().setComponent("cpu", cpuRyzen7_7700X);
+    useBuildStore.getState().addStorage(storageNvme);
+
+    expect(useBuildStore.getState().getTotalPrice()).toBe(
+      cpuRyzen7_7700X.price + storageNvme.price,
+    );
+  });
+
   it("elimina solo una instancia cuando hay almacenamiento duplicado", () => {
     const store = useBuildStore.getState();
     store.addStorage(storageNvme);
