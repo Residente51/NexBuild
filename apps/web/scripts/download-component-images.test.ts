@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { catalogImageSources } from "./catalog-image-sources.mjs";
 import { createEmbeddedSvg, detectRasterMime } from "./download-component-images.mjs";
 
 describe("catalog image materializer", () => {
@@ -17,5 +18,12 @@ describe("catalog image materializer", () => {
     expect(svg).toContain("data:image/jpeg;base64,/9j/");
     expect(svg).toContain("preserveAspectRatio=\"xMidYMid meet\"");
     expect(svg).toContain("a=1&amp;b=2");
+  });
+
+  it("solo registra fuentes oficiales de AMD", () => {
+    for (const source of Object.values(catalogImageSources)) {
+      expect(new URL(source.productPage).hostname).toBe("www.amd.com");
+      expect(new URL(source.imageUrl).hostname).toBe("www.amd.com");
+    }
   });
 });

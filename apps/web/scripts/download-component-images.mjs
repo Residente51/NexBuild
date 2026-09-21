@@ -16,12 +16,8 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const imagesDirectory = resolve(scriptDirectory, "../public/images/components");
 const maximumBytes = 5 * 1024 * 1024;
 const requestTimeoutMs = 15_000;
-const allowedImageHosts = new Set([
-  "cdn.ibertronica.es",
-  "cdn.shopify.com",
-  "ecommerce.datablitz.com.ph",
-  "neocomputer.md",
-]);
+const allowedImageHosts = new Set(["www.amd.com"]);
+const userAgent = "Mozilla/5.0 NexBuild catalog image materializer/1.0";
 
 export function detectRasterMime(buffer) {
   if (!buffer || buffer.length < 12) return null;
@@ -44,16 +40,40 @@ export function createEmbeddedSvg(buffer, mime, sourceUrl) {
 `;
 }
 
-async function downloadImage(imageUrl) {
-  const parsedUrl = new URL(imageUrl);
-  if (parsedUrl.protocol !== "https:" || !allowedImageHosts.has(parsedUrl.hostname)) {
-    throw new Error(`Host de imagen no permitido: ${parsedUrl.hostname}`);
+async function downloadImage({ imageUrl, productPage }) {
+  const parsedImageUrl = new URL(imageUrl);
+  const parsedProductPage = new URL(productPage);
+  if (
+    parsedImageUrl.protocol !== "https:" ||
+    parsedProductPage.protocol !== "https:" ||
+    !allowedImageHosts.has(parsedImageUrl.hostname) ||
+    !allowedImageHosts.has(parsedProductPage.hostname)
+  ) {
+    throw new Error("Solo se permiten fichas y assets oficiales de AMD");
   }
 
-  const response = await fetch(parsedUrl, {
+  const productResponse = await fetch(parsedProductPage, {
     redirect: "follow",
     signal: AbortSignal.timeout(requestTimeoutMs),
-    headers: { "User-Agent": "NexBuild catalog image materializer/1.0" },
+    headers: { "User-Agent": userAgent },
+  });
+  if (!productResponse.ok) throw new Error(`Ficha oficial HTTP ${productResponse.status}`);
+
+  const productHtml = await productResponse.text();
+  if (!productHtml.includes(parsedImageUrl.pathname)) {
+    throw new Error("La ficha oficial no referencia el asset indicado");
+  }
+
+  const cookies = productResponse.headers.getSetCookie?.() ?? [];
+  const response = await fetch(parsedImageUrl, {
+    redirect: "follow",
+    signal: AbortSignal.timeout(requestTimeoutMs),
+    headers: {
+      Accept: "image/jpeg,image/png,*/*;q=0.8",
+      Cookie: cookies.map((cookie) => cookie.split(";", 1)[0]).join("; "),
+      Referer: productPage,
+      "User-Agent": userAgent,
+    },
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -74,7 +94,7 @@ async function materializeImages({ write }) {
   let succeeded = 0;
   for (const [slug, source] of Object.entries(catalogImageSources)) {
     try {
-      const { buffer, mime } = await downloadImage(source.imageUrl);
+      const { buffer, mime } = await downloadImage(source);
       const outputPath = resolve(imagesDirectory, `${slug}.svg`);
       const svg = createEmbeddedSvg(buffer, mime, source.imageUrl);
 
