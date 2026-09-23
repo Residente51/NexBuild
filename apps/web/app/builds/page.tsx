@@ -15,6 +15,10 @@ import type { BuildSelection, PCComponent } from "@/types/component";
 export const metadata: Metadata = {
   title: "Mis armados",
   description: "Revisa y administra tus configuraciones guardadas en NexBuild.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const dynamic = "force-dynamic";
