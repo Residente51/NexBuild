@@ -19,19 +19,88 @@ import type { PCComponent } from "@/types/component";
 
 type ComparisonPageState = "loading" | "ready" | "error";
 
-interface ComparisonRow {
+export interface ComparisonRow {
   label: string;
   values: string[];
+  isPrice?: boolean;
 }
 
-function formatPrice(component: PCComponent): string {
+export function formatComparisonPrice(component: PCComponent): string {
   return component.price > 0
     ? `$${component.price.toLocaleString("es-CL")}`
     : "Sin precio";
 }
 
-function hasDifference(values: string[]): boolean {
+export function hasDifference(values: string[]): boolean {
   return new Set(values).size > 1;
+}
+
+export function getLowestValidPrice(components: PCComponent[]): number | null {
+  const prices = components
+    .map((component) => component.price)
+    .filter((price) => Number.isFinite(price) && price > 0);
+
+  return prices.length > 0 ? Math.min(...prices) : null;
+}
+
+export function getPriceDifference(
+  price: number,
+  lowestPrice: number | null,
+): number | null {
+  if (lowestPrice === null || price <= lowestPrice || price <= 0) return null;
+  return price - lowestPrice;
+}
+
+export function createComparisonRows(
+  components: PCComponent[],
+): ComparisonRow[] {
+  if (components.length === 0) return [];
+
+  const specificationMaps = components.map(
+    (component) =>
+      new Map(
+        getTechnicalSpecifications(component).map((specification) => [
+          specification.label,
+          specification.value,
+        ]),
+      ),
+  );
+  const specificationLabels = Array.from(
+    new Set(specificationMaps.flatMap((map) => Array.from(map.keys()))),
+  );
+
+  return [
+    {
+      label: "Marca",
+      values: components.map((component) => component.brand),
+    },
+    {
+      label: "Categoría",
+      values: components.map(
+        (component) => CATEGORY_LABELS[component.category],
+      ),
+    },
+    {
+      label: "Precio",
+      values: components.map(formatComparisonPrice),
+      isPrice: true,
+    },
+    {
+      label: "Disponibilidad",
+      values: components.map(getStockLabel),
+    },
+    ...specificationLabels.map((label) => ({
+      label,
+      values: specificationMaps.map((map) => map.get(label) ?? "—"),
+    })),
+  ];
+}
+
+export function getVisibleComparisonRows(
+  rows: ComparisonRow[],
+  hideEqualRows: boolean,
+): ComparisonRow[] {
+  return hideEqualRows ? rows.filter((row) => hasDifference(row.values)) : rows;
 }
 
 function ComparisonImage({ component }: { component: PCComponent }) {
@@ -99,6 +168,7 @@ export function ComparisonView() {
   const [catalog, setCatalog] = useState<PCComponent[]>([]);
   const [state, setState] = useState<ComparisonPageState>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [hideEqualRows, setHideEqualRows] = useState(false);
 
   const loadCatalog = useCallback(async (force = false) => {
     try {
@@ -157,47 +227,16 @@ export function ComparisonView() {
       .filter((component): component is PCComponent => Boolean(component));
   }, [catalog, selectedItems]);
 
-  const rows = useMemo<ComparisonRow[]>(() => {
-    if (components.length === 0) return [];
-
-    const specificationMaps = components.map(
-      (component) =>
-        new Map(
-          getTechnicalSpecifications(component).map((specification) => [
-            specification.label,
-            specification.value,
-          ]),
-        ),
-    );
-    const specificationLabels = Array.from(
-      new Set(specificationMaps.flatMap((map) => Array.from(map.keys()))),
-    );
-
-    return [
-      {
-        label: "Marca",
-        values: components.map((component) => component.brand),
-      },
-      {
-        label: "Categoría",
-        values: components.map(
-          (component) => CATEGORY_LABELS[component.category],
-        ),
-      },
-      {
-        label: "Precio",
-        values: components.map(formatPrice),
-      },
-      {
-        label: "Disponibilidad",
-        values: components.map(getStockLabel),
-      },
-      ...specificationLabels.map((label) => ({
-        label,
-        values: specificationMaps.map((map) => map.get(label) ?? "—"),
-      })),
-    ];
-  }, [components]);
+  const rows = useMemo(() => createComparisonRows(components), [components]);
+  const differenceRows = useMemo(
+    () => rows.filter((row) => hasDifference(row.values)),
+    [rows],
+  );
+  const visibleRows = useMemo(
+    () => getVisibleComparisonRows(rows, hideEqualRows),
+    [hideEqualRows, rows],
+  );
+  const lowestPrice = useMemo(() => getLowestValidPrice(components), [components]);
 
   const selectedCategory = components[0]?.category;
 
@@ -300,93 +339,163 @@ export function ComparisonView() {
                 {components.length} de {MAX_COMPARISON_ITEMS} componentes
               </p>
             </div>
-            <p className="text-sm text-white/50">
-              Las filas marcadas contienen diferencias.
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm text-white/50" aria-live="polite">
+                {differenceRows.length} {differenceRows.length === 1 ? "diferencia visible" : "diferencias visibles"}
+              </p>
+              <button
+                type="button"
+                aria-pressed={hideEqualRows}
+                aria-controls="comparison-table-body"
+                onClick={() => setHideEqualRows((value) => !value)}
+                className="min-h-11 rounded-xl border border-white/10 px-4 text-sm font-semibold text-white/75 transition-colors hover:border-[#0E79B2]/50 hover:bg-[#0E79B2]/10 hover:text-[#38BDF8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
+              >
+                {hideEqualRows ? "Mostrar todas" : "Ocultar iguales"}
+              </button>
+            </div>
           </div>
 
-          <div
-            role="region"
-            aria-labelledby="comparison-table-title"
-            tabIndex={0}
-            className="overflow-x-auto rounded-2xl border border-white/10 bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
-          >
-            <table className="w-full min-w-max border-collapse text-left">
-              <caption className="sr-only">
-                Comparación de {components.length} componentes de categoría{" "}
-                {CATEGORY_LABELS[selectedCategory]}
-              </caption>
-              <thead>
-                <tr className="border-b border-white/10 align-top">
-                  <th
-                    scope="col"
-                    className="sticky left-0 z-10 w-44 min-w-44 bg-[#191923] p-4 text-sm font-semibold text-white/70"
-                  >
-                    Característica
-                  </th>
-                  {components.map((component) => (
+          {hideEqualRows && visibleRows.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center">
+              <h3 className="text-lg font-bold text-[#FBFEF9]">No hay diferencias visibles</h3>
+              <p className="mt-2 text-sm text-white/60">
+                Estos componentes tienen los mismos valores comparables.
+              </p>
+              <button
+                type="button"
+                onClick={() => setHideEqualRows(false)}
+                className="mt-5 min-h-11 rounded-xl border border-white/10 px-4 text-sm font-semibold text-white/75 transition-colors hover:border-[#0E79B2]/50 hover:bg-[#0E79B2]/10 hover:text-[#38BDF8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
+              >
+                Mostrar todas las especificaciones
+              </button>
+            </div>
+          ) : (
+            <div
+              role="region"
+              aria-labelledby="comparison-table-title"
+              tabIndex={0}
+              className="mt-4 snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl border border-white/10 bg-white/5 scroll-smooth motion-reduce:scroll-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
+            >
+              <table className="w-full min-w-max border-collapse text-left">
+                <caption className="sr-only">
+                  Comparación de {components.length} componentes de categoría{" "}
+                  {CATEGORY_LABELS[selectedCategory]}
+                </caption>
+                <thead>
+                  <tr className="border-b border-white/10 align-top">
                     <th
-                      key={component.slug}
                       scope="col"
-                      className="w-64 min-w-64 p-4"
+                      className="sticky left-0 z-20 w-44 min-w-44 bg-[#191923] p-4 text-sm font-semibold text-white/70 shadow-[8px_0_14px_rgba(0,0,0,0.16)]"
                     >
-                      <ComparisonImage component={component} />
-                      <Link
-                        href={`/components/${component.slug}`}
-                        className="mt-4 block rounded-lg text-lg font-bold text-[#FBFEF9] hover:text-[#38BDF8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
-                      >
-                        {component.name}
-                      </Link>
-                      <p className="mt-1 text-sm font-normal text-white/50">
-                        {component.brand}
-                      </p>
-                      <Button
-                        variant="secondary"
-                        onClick={() => removeComponent(component.slug)}
-                        className="mt-4 w-full px-4 py-2 text-sm"
-                        aria-label={`Quitar ${component.name} de la comparación`}
-                      >
-                        Quitar
-                      </Button>
+                      Característica
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => {
-                  const isDifferent = hasDifference(row.values);
+                    {components.map((component) => {
+                      const isLowestPrice =
+                        lowestPrice !== null && component.price === lowestPrice;
 
-                  return (
-                    <tr key={row.label} className="border-b border-white/5 last:border-b-0">
-                      <th
-                        scope="row"
-                        className={`sticky left-0 z-10 w-44 min-w-44 p-4 align-top text-sm font-semibold text-[#FBFEF9] ${
-                          isDifferent ? "bg-[#0E79B2]/20" : "bg-[#191923]"
+                      return (
+                        <th
+                          key={component.slug}
+                          scope="col"
+                          className="w-64 min-w-64 snap-start p-4"
+                        >
+                          <ComparisonImage component={component} />
+                          <Link
+                            href={`/components/${component.slug}`}
+                            className="mt-4 block rounded-lg text-lg font-bold text-[#FBFEF9] hover:text-[#38BDF8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
+                          >
+                            {component.name}
+                          </Link>
+                          <p className="mt-1 text-sm font-normal text-white/50">
+                            {component.brand}
+                          </p>
+                          <p className={`mt-3 text-lg font-bold tabular-nums ${
+                            isLowestPrice ? "text-emerald-300" : "text-[#FBFEF9]"
+                          }`}>
+                            {formatComparisonPrice(component)}
+                          </p>
+                          {isLowestPrice && (
+                            <p className="mt-1 text-xs font-semibold text-emerald-300">
+                              Precio mínimo válido
+                            </p>
+                          )}
+                          <p className={`mt-2 text-xs font-semibold ${
+                            component.inStock === false ? "text-red-300" : "text-emerald-300"
+                          }`}>
+                            {getStockLabel(component)}
+                          </p>
+                          <Button
+                            variant="secondary"
+                            onClick={() => removeComponent(component.slug)}
+                            className="mt-4 w-full px-4 py-2 text-sm"
+                            aria-label={`Quitar ${component.name} de la comparación`}
+                          >
+                            Quitar
+                          </Button>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody id="comparison-table-body">
+                  {visibleRows.map((row) => {
+                    const isDifferent = hasDifference(row.values);
+
+                    return (
+                      <tr
+                        key={row.label}
+                        className={`border-b border-white/5 last:border-b-0 ${
+                          isDifferent ? "bg-[#0E79B2]/[0.045]" : ""
                         }`}
                       >
-                        {row.label}
-                        {isDifferent && (
-                          <span className="mt-2 block text-[11px] font-semibold uppercase tracking-wider text-[#38BDF8]">
-                            Diferencia
-                          </span>
-                        )}
-                      </th>
-                      {row.values.map((value, index) => (
-                        <td
-                          key={`${components[index].slug}-${row.label}`}
-                          className={`w-64 min-w-64 p-4 align-top text-sm text-white/75 ${
-                            isDifferent ? "bg-[#0E79B2]/8" : ""
-                          } ${row.label === "Precio" ? "tabular-nums font-semibold text-[#FBFEF9]" : ""}`}
+                        <th
+                          scope="row"
+                          className={`sticky left-0 z-10 w-44 min-w-44 p-4 align-top text-sm font-semibold text-[#FBFEF9] shadow-[8px_0_14px_rgba(0,0,0,0.12)] ${
+                            isDifferent ? "bg-[#102536]" : "bg-[#191923]"
+                          }`}
                         >
-                          {value}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          {row.label}
+                          {isDifferent && (
+                            <span className="mt-2 block text-[11px] font-semibold uppercase tracking-wider text-[#38BDF8]">
+                              Diferencia
+                            </span>
+                          )}
+                        </th>
+                        {row.values.map((value, index) => {
+                          const component = components[index];
+                          const priceDifference = row.isPrice
+                            ? getPriceDifference(component.price, lowestPrice)
+                            : null;
+                          const isLowestPrice =
+                            row.isPrice &&
+                            lowestPrice !== null &&
+                            component.price === lowestPrice;
+
+                          return (
+                            <td
+                              key={`${component.slug}-${row.label}`}
+                              className={`w-64 min-w-64 snap-start p-4 align-top text-sm text-white/75 ${
+                                isDifferent ? "bg-[#0E79B2]/[0.035]" : ""
+                              } ${row.isPrice ? "tabular-nums font-semibold text-[#FBFEF9]" : ""}`}
+                            >
+                              <span className={isLowestPrice ? "text-emerald-300" : undefined}>
+                                {value}
+                              </span>
+                              {priceDifference !== null && (
+                                <span className="mt-1 block text-xs font-medium text-white/50">
+                                  +${priceDifference.toLocaleString("es-CL")} vs. menor precio
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
     </div>
