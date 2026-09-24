@@ -1,69 +1,17 @@
 ---
 name: nexbuild-feature
-description: Implement an already-approved NexBuild feature efficiently using the existing architecture.
+description: Implement an approved NexBuild feature through the existing architecture with narrow scope and milestone-level verification.
 ---
 
 # NexBuild Feature Workflow
 
-Implement the requested feature using the existing NexBuild architecture.
+1. Read repository-root `AGENTS.md` and `MEMORY.md`.
+2. Define the requested scope, acceptance conditions, and files likely to change.
+3. Inspect only related routes, components, types, stores, repositories, and tests. Search for an existing implementation seam first.
+4. Make the smallest change that satisfies the approved scope. Preserve architecture, security boundaries, accessibility, responsive behavior, and strict TypeScript.
+5. During development, run focused tests and `pnpm run typecheck` from `apps/web`.
+6. At milestone close, run `pnpm run check`, `pnpm build`, and scoped diff checks once. Do not fix unrelated failures.
+7. Do not commit or push unless explicitly requested. Stage only explicit task files.
+8. Update `MEMORY.md` only when the real project state, decisions, completed milestones, or next priorities changed.
 
-## Context strategy
-
-Do not inspect the whole repository.
-
-Start only with:
-- directly affected routes and components
-- relevant types
-- repository/data layer when needed
-- stores when client state is needed
-- relevant tests
-
-Read additional files only to resolve a concrete dependency.
-
-Do not re-analyze architecture already documented in AGENTS.md unless necessary.
-
-## Implementation
-
-Prefer existing patterns.
-
-Maintain:
-- Server Components by default
-- small client islands
-- strict TypeScript
-- existing NexBuild design language
-- repository boundaries
-- accessibility
-- responsive behavior
-
-Do not introduce:
-- new dependencies
-- schema or migration changes
-- unrelated refactors
-- global redesigns
-
-unless explicitly approved.
-
-If the approved architecture becomes invalid, stop and report the blocker.
-
-## Verification
-
-Run:
-1. relevant tests
-2. npx tsc --noEmit
-3. pnpm lint
-
-Run pnpm build for major milestones or route/build-sensitive work.
-
-Do not fix unrelated failures.
-
-## Final response
-
-Return only:
-1. result
-2. files changed
-3. verification
-4. deferred issues
-5. exact git add command
-6. Conventional Commit message
-
-Never commit or push automatically.
+If the approved scope or architecture becomes invalid, stop and report the blocker.
