@@ -37,6 +37,16 @@ The three smoke commits are not ancestors of `main` yet. Do not describe their s
 
 At handoff time, the working tree already had an unrelated edit in `apps/web/package.json` adding `test:smoke:auth`, but `apps/web/scripts/smoke-authenticated.mjs` was not present on `main`; the complete script exists on `test/e2e-authenticated-smoke`. Do not stage or modify that package change accidentally.
 
+### E2E pending consolidation
+
+- `test/e2e-smoke` (`75dd97c`): expanded public smoke; not yet in `main`.
+- `test/e2e-auth-smoke` (`c2557c2`): anonymous/Auth boundaries; PR #3 open; not yet in `main`.
+- `test/e2e-authenticated-smoke` (`a888603`): authenticated smoke and diagnostics; PR #4 open; not yet in `main`.
+
+Decision: do not integrate the three branches separately. Create `test/e2e-integration` from `origin/main`; apply `75dd97c`, then integrate `c2557c2` by manually resolving `smoke-ui.mjs` while preserving both coverage sets, and then apply `a888603`. Register `test:smoke:auth`, run the public smoke, a real authenticated smoke, `check`, and `build`, and create one consolidated PR. Close PR #3 and PR #4 only after that PR is merged.
+
+Production Auth already works at `https://nexbuild.games`: magic link, callback, authenticated `/builds`, and logout were verified. The real authenticated smoke can therefore be retried during consolidation.
+
 ## Production
 
 - Primary domain: `https://nexbuild.games`.
