@@ -7,6 +7,15 @@ export const metadata: Metadata = {
   title: "Catálogo de componentes",
   description:
     "Explora procesadores, tarjetas gráficas y otros componentes para armar tu PC.",
+  alternates: {
+    canonical: "/components",
+  },
+  openGraph: {
+    url: "/components",
+    title: "Catálogo de componentes",
+    description:
+      "Explora procesadores, tarjetas gráficas y otros componentes para armar tu PC.",
+  },
 };
 
 export const dynamic = "force-dynamic";
