@@ -1,12 +1,36 @@
 import puppeteer from "puppeteer";
 
 const baseUrl = process.env.NEXBUILD_BASE_URL ?? "http://localhost:3000";
+const baseOrigin = new URL(baseUrl).origin;
 const browser = await puppeteer.launch({ headless: true });
 
 try {
   const page = await browser.newPage();
   const browserErrors = [];
   const failedResponses = [];
+  const callbackResponses = [];
+
+  const isSameOrigin = (url) => {
+    try {
+      return new URL(url).origin === baseOrigin;
+    } catch {
+      return false;
+    }
+  };
+
+  const assertNoBlockingBrowserFailures = () => {
+    const sameOriginFailures = failedResponses.filter(({ url }) => isSameOrigin(url));
+    const actionableBrowserErrors = browserErrors.filter(
+      ({ url }) => !url || isSameOrigin(url),
+    );
+
+    if (actionableBrowserErrors.length > 0 || sameOriginFailures.length > 0) {
+      throw new Error(
+        `Browser errors:\n${JSON.stringify({ actionableBrowserErrors, sameOriginFailures }, null, 2)}`,
+      );
+    }
+  };
+
   page.on("console", (message) => {
     if (message.type() === "error") {
       browserErrors.push({ message: message.text(), url: message.location().url });
@@ -16,13 +40,24 @@ try {
     browserErrors.push({ message: error.message, url: page.url() });
   });
   page.on("response", (response) => {
+    const responseUrl = new URL(response.url());
+    if (
+      responseUrl.origin === baseOrigin &&
+      responseUrl.pathname === "/auth/callback"
+    ) {
+      callbackResponses.push({
+        status: response.status(),
+        url: response.url(),
+      });
+    }
     if (response.status() >= 400) {
       failedResponses.push({ status: response.status(), url: response.url() });
     }
   });
 
   await page.setViewport({ width: 390, height: 844 });
-  await page.goto(`${baseUrl}/`, { waitUntil: "networkidle0" });
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("h1");
 
   const homeTitle = await page.$eval("h1", (element) => element.textContent?.trim());
   if (!homeTitle) throw new Error("The home page has no heading");
@@ -31,6 +66,84 @@ try {
   if (!menuButton) throw new Error("The mobile navigation trigger is missing");
   await menuButton.click();
   await page.waitForSelector('[role="dialog"][aria-label="Menú de navegación"]');
+
+  await page.goto(`${baseUrl}/components`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector('[aria-label="Resultados del catálogo"] article');
+  const usableCatalogProducts = await page.$$eval(
+    '[aria-label="Resultados del catálogo"] article',
+    (cards) =>
+      cards.filter((card) =>
+        Boolean(card.querySelector('a[href^="/components/"]')),
+      ).length,
+  );
+  if (usableCatalogProducts === 0) {
+    throw new Error("The catalog has no usable products");
+  }
+
+  await page.goto(`${baseUrl}/login`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector('form input[type="email"][name="email"]');
+  const loginFlow = await page.$eval("form", (form) => ({
+    hasEmailField: Boolean(form.querySelector('input[type="email"][name="email"]')),
+    hasSubmitButton: Boolean(form.querySelector('button[type="submit"]')),
+  }));
+  if (!loginFlow.hasEmailField || !loginFlow.hasSubmitButton) {
+    throw new Error("The login flow is incomplete");
+  }
+
+  await page.goto(`${baseUrl}/builds`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    (origin) => {
+      const url = new URL(window.location.href);
+      return (
+        url.origin === origin &&
+        url.pathname === "/login" &&
+        url.searchParams.get("next") === "/builds"
+      );
+    },
+    {},
+    baseOrigin,
+  );
+  const privateBuildsContent = await page.evaluate(() =>
+    document.body.textContent?.includes("Mis armados"),
+  );
+  if (privateBuildsContent) {
+    throw new Error("Private builds content was rendered for an anonymous visitor");
+  }
+
+  async function assertSafeAuthCallback(path) {
+    const responseCount = callbackResponses.length;
+    await page.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(
+      (origin) => {
+        const url = new URL(window.location.href);
+        return (
+          url.origin === origin &&
+          url.pathname === "/login" &&
+          url.searchParams.get("error") === "auth_callback"
+        );
+      },
+      {},
+      baseOrigin,
+    );
+    const callbackFailures = callbackResponses
+      .slice(responseCount)
+      .filter(({ status }) => status >= 500);
+    if (callbackFailures.length > 0) {
+      throw new Error(`The auth callback returned a server error: ${JSON.stringify(callbackFailures)}`);
+    }
+    const errorMessage = await page.$eval('[role="alert"]', (element) =>
+      element.textContent?.trim(),
+    );
+    if (!errorMessage) {
+      throw new Error("The auth callback did not render a safe login error");
+    }
+  }
+
+  await assertSafeAuthCallback("/auth/callback");
+  await assertSafeAuthCallback("/auth/callback?next=https%3A%2F%2Fevil.example");
+
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("h1");
 
   await page.evaluate(() => {
     localStorage.setItem("nexbuild-active-build", JSON.stringify({
@@ -57,51 +170,130 @@ try {
     }));
   });
 
-  await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle0" });
+  await page.goto(`${baseUrl}/builder`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() =>
     document.body.textContent?.includes("CPU persistida de prueba"),
   );
   await page.click('button[aria-label="Quitar Procesador"]');
-  const opened = await page.evaluate(() => {
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("button")].some((element) =>
+      element.textContent?.includes("Elegir Procesador"),
+    ),
+  );
+  await page.evaluate(() => {
     const button = [...document.querySelectorAll("button")].find((element) =>
       element.textContent?.includes("Elegir Procesador"),
     );
-    if (!(button instanceof HTMLElement)) return false;
+    if (!(button instanceof HTMLElement)) {
+      throw new Error("The CPU selector is missing");
+    }
     button.click();
-    return true;
   });
-  if (!opened) throw new Error("The CPU selector is missing");
 
   await page.waitForSelector("#catalog-modal-panel");
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll("#catalog-modal-panel button")].some(
+        (button) => button.textContent?.includes("Seleccionar"),
+      ),
+    { timeout: 15_000 },
+  );
   const modalTitle = await page.$eval(
     "#catalog-modal-title",
     (element) => element.textContent?.trim(),
   );
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("#catalog-modal-panel button")].some(
+      (button) =>
+        button.textContent?.trim() === "Seleccionar" &&
+        !button.hasAttribute("disabled"),
+    ),
+  );
   const selectableProducts = await page.$$eval(
     "#catalog-modal-panel button",
-    (buttons) => buttons.filter((button) => button.textContent?.includes("Seleccionar")).length,
+    (buttons) =>
+      buttons.filter(
+        (button) =>
+          button.textContent?.trim() === "Seleccionar" &&
+          !button.hasAttribute("disabled"),
+      ).length,
   );
   if (selectableProducts === 0) throw new Error("The catalog modal has no selectable CPUs");
-  const sameOriginFailures = failedResponses.filter(({ url }) =>
-    url.startsWith(baseUrl),
-  );
-  const externalFailures = failedResponses.filter(
-    ({ url }) => !url.startsWith(baseUrl),
-  );
-  const actionableBrowserErrors = browserErrors.filter(
-    ({ url }) => !url || url.startsWith(baseUrl),
-  );
-  if (actionableBrowserErrors.length > 0 || sameOriginFailures.length > 0) {
-    throw new Error(
-      `Browser errors:\n${JSON.stringify({ actionableBrowserErrors, sameOriginFailures }, null, 2)}`,
+  const selectedComponent = await page.evaluate(() => {
+    const button = [...document.querySelectorAll("#catalog-modal-panel button")].find(
+      (element) =>
+        element.textContent?.trim() === "Seleccionar" &&
+        !element.hasAttribute("disabled"),
     );
+    if (!(button instanceof HTMLElement)) {
+      throw new Error("A selectable CPU was not found");
+    }
+    const item = button.closest("div.group");
+    const name = item?.querySelector("p.mt-1")?.textContent?.trim();
+    button.click();
+    return name;
+  });
+  if (!selectedComponent) throw new Error("The selected CPU has no name");
+
+  await page.waitForSelector("#catalog-modal-panel", { hidden: true });
+  await page.waitForFunction(
+    (componentName) => {
+      const persisted = localStorage.getItem("nexbuild-active-build");
+      if (!persisted) return false;
+      const parsed = JSON.parse(persisted);
+      return (
+        parsed?.state?.build?.cpu?.id !== "smoke-cpu" &&
+        document.body.textContent?.includes(componentName)
+      );
+    },
+    {},
+    selectedComponent,
+  );
+  await page.waitForSelector("#build-summary-panel [role=\"status\"]");
+  const compatibilitySummary = await page.$eval(
+    "#build-summary-panel [role=\"status\"]",
+    (element) => element.textContent?.trim(),
+  );
+  if (!compatibilitySummary) {
+    throw new Error("The Builder compatibility summary is missing");
   }
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    (componentName) => document.body.textContent?.includes(componentName),
+    {},
+    selectedComponent,
+  );
+
+  await page.goto(`${baseUrl}/compare`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("h1");
+  await page.waitForFunction(
+    () =>
+      !document.querySelector('[role="status"]') ||
+      Boolean(document.querySelector('[role="alert"]')),
+  );
+  if (await page.$('[role="alert"]')) {
+    throw new Error("The compare page rendered an error state");
+  }
+  const compareTitle = await page.$eval("h1", (element) => element.textContent?.trim());
+  if (!compareTitle) throw new Error("The compare page has no heading");
+
+  assertNoBlockingBrowserFailures();
+  const externalFailures = failedResponses.filter(({ url }) => !isSameOrigin(url));
 
   console.log(JSON.stringify({
     homeTitle,
+    usableCatalogProducts,
     modalTitle,
     selectableProducts,
     persistedBuildHydrated: true,
+    selectedComponent,
+    compatibilitySummary,
+    persistedBuildReloaded: true,
+    compareTitle,
+    loginFlow,
+    anonymousBuildsRedirected: true,
+    safeAuthCallbacks: 2,
     externalFailures,
   }, null, 2));
 } finally {
