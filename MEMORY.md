@@ -1,10 +1,10 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-09-23
+Updated: 2026-09-27
 
 ## Current Snapshot
 
-- Active branch: `main`, aligned with `origin/main` at `b42851d` when this handoff was prepared.
+- Stable branch: `main`; consolidated E2E coverage was squash-merged through PR #6 as `d7cb844`.
 - Main app: `apps/web`.
 - README and architecture artifacts reflect the current catalog, Builder, Auth, ownership, saved-build, and sharing architecture.
 - The architecture visual check currently reports `pass`.
@@ -17,12 +17,13 @@ Updated: 2026-09-23
 - Auth Milestone 1: Supabase SSR, PKCE callback, cookie sessions, login, and logout.
 - Ownership Milestone 2: authenticated ownership and hardened RLS boundaries.
 - Saved Builds Milestone 3: authenticated history and management UI.
-- Public smoke coverage is complete on `test/e2e-smoke` at `75dd97c`.
-- Anonymous Auth boundary smoke coverage is complete on `test/e2e-auth-smoke` at `c2557c2`.
-- The authenticated smoke is prepared with redacted diagnostics and cleanup reporting on `test/e2e-authenticated-smoke` at `a888603`.
+- Public and anonymous Auth-boundary smoke coverage is consolidated on `main` through PR #6.
+- The stable smoke covers home, catalog, Builder, Compare, Builder local persistence, `/login`, anonymous `/builds` protection, safe Auth callbacks, and same-origin error detection.
+- The full authenticated smoke remains deferred to a separate PKCE redesign milestone and is not registered in `package.json`.
 - README and architecture documentation are updated.
 - Basic static metadata exists for `/components`, `/builder`, and `/compare`.
 - `/login`, `/builds`, and `/guides` use `noindex, nofollow`.
+- Technical SEO is complete: site-wide metadata base, canonicals, Open Graph, dynamic product metadata, `robots.txt`, resilient `sitemap.xml`, and `noindex, nofollow` for shared builds.
 - `nexbuild.games` was validated working over HTTPS.
 - Production `NEXT_PUBLIC_SITE_URL` was set to `https://nexbuild.games`.
 - Supabase Site URL was set to `https://nexbuild.games`.
@@ -31,21 +32,12 @@ Updated: 2026-09-23
 
 The production and real-Auth facts above record the validated end-of-session state supplied for this handoff. They were not independently re-run while preparing these documentation files.
 
-## Smoke Branch State
+## E2E State
 
-The three smoke commits are not ancestors of `main` yet. Do not describe their scripts as merged until that changes.
-
-At handoff time, the working tree already had an unrelated edit in `apps/web/package.json` adding `test:smoke:auth`, but `apps/web/scripts/smoke-authenticated.mjs` was not present on `main`; the complete script exists on `test/e2e-authenticated-smoke`. Do not stage or modify that package change accidentally.
-
-### E2E pending consolidation
-
-- `test/e2e-smoke` (`75dd97c`): expanded public smoke; not yet in `main`.
-- `test/e2e-auth-smoke` (`c2557c2`): anonymous/Auth boundaries; PR #3 open; not yet in `main`.
-- `test/e2e-authenticated-smoke` (`a888603`): authenticated smoke and diagnostics; PR #4 open; not yet in `main`.
-
-Decision: do not integrate the three branches separately. Create `test/e2e-integration` from `origin/main`; apply `75dd97c`, then integrate `c2557c2` by manually resolving `smoke-ui.mjs` while preserving both coverage sets, and then apply `a888603`. Register `test:smoke:auth`, run the public smoke, a real authenticated smoke, `check`, and `build`, and create one consolidated PR. Close PR #3 and PR #4 only after that PR is merged.
-
-Production Auth already works at `https://nexbuild.games`: magic link, callback, authenticated `/builds`, and logout were verified. The real authenticated smoke can therefore be retried during consolidation.
+- PR #6, `test/e2e-integration`, was squash-merged into `main` as `d7cb844` after all GitHub checks passed.
+- The integrated script is `apps/web/scripts/smoke-ui.mjs`; it combines public flows and anonymous Auth boundaries.
+- `smoke-authenticated.mjs` and `test:smoke:auth` are intentionally absent. Revisit authenticated automation only as a separate same-browser PKCE milestone.
+- PR #3 and PR #4 were superseded by PR #6.
 
 ## Production
 
@@ -53,18 +45,6 @@ Production Auth already works at `https://nexbuild.games`: magic link, callback,
 - Vercel deployment working.
 - Supabase connected.
 - Production Auth validated.
-
-## Main Pending Work: Complete SEO
-
-- add `metadataBase`
-- add canonical URLs
-- add OpenGraph metadata
-- add `sitemap.xml`
-- add `robots.txt`
-- add dynamic `generateMetadata` for `/components/[slug]`
-- add `noindex` for `/build/[id]`
-
-Do not start SEO unless it is explicitly requested.
 
 ## After SEO
 
