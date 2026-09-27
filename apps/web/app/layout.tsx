@@ -15,12 +15,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://nexbuild.games",
+  ),
   title: {
     default: "NexBuild — Configurador de PC",
     template: "%s | NexBuild",
   },
   description:
     "Configura un PC compatible y compara precios referenciales para el mercado chileno.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    siteName: "NexBuild",
+    locale: "es_CL",
+    type: "website",
+    url: "/",
+    title: "NexBuild — Configurador de PC",
+    description:
+      "Configura un PC compatible y compara precios referenciales para el mercado chileno.",
+  },
 };
 
 // A request-scoped CSP nonce requires dynamic rendering.

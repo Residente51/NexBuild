@@ -6,6 +6,15 @@ export const metadata: Metadata = {
   title: "Comparar componentes",
   description:
     "Compara entre 2 y 4 componentes de la misma categoría y revisa sus diferencias.",
+  alternates: {
+    canonical: "/compare",
+  },
+  openGraph: {
+    url: "/compare",
+    title: "Comparar componentes",
+    description:
+      "Compara entre 2 y 4 componentes de la misma categoría y revisa sus diferencias.",
+  },
 };
 
 export default function ComparePage() {

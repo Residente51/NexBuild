@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import { calculateBuildPrice } from "@/lib/build/totals";
 import { readSharedBuild } from "@/lib/build/sharedBuilds";
 import { notFound } from "next/navigation";
 import LoadBuildButton from "@/components/builder/LoadBuildButton";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { ComponentCategory } from "@/lib/categories";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function SharedBuildPage({
   params,
