@@ -13,7 +13,6 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:smoke": "node scripts/smoke-ui.mjs",
-    "test:smoke:auth": "node scripts/smoke-authenticated.mjs",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test:ci",
     "catalog:migrate": "node scripts/migrate-to-supabase.mjs",
     "catalog:enrich": "node scripts/enrich-catalog.mjs",
