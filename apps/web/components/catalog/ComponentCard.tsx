@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { CompareButton } from "@/components/compare/CompareButton";
+import { ComponentImage } from "@/components/catalog/ComponentImage";
 import { buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import type { PCComponent } from "@/types/component";
@@ -15,18 +15,18 @@ export function ComponentCard({
   return (
     <article className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900">
       <div className="relative flex h-48 items-center justify-center overflow-hidden bg-zinc-800">
-        {component.image ? (
-          <Image
-            src={component.image}
-            alt=""
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-            unoptimized
-            className="object-contain p-4"
-          />
-        ) : (
-          <span aria-hidden="true" className="text-7xl">🖥️</span>
-        )}
+        <ComponentImage
+          src={component.image}
+          alt=""
+          fill
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+          className="object-contain p-4"
+          fallback={
+            <span aria-hidden="true" className="text-7xl">
+              🖥️
+            </span>
+          }
+        />
       </div>
 
       <div className="space-y-4 p-6">

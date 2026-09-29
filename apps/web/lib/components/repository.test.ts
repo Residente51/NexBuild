@@ -132,6 +132,21 @@ describe("fetchCatalogFromSupabase", () => {
     );
   });
 
+  it("omite referencias locales cuyos assets placeholder fueron retirados", async () => {
+    mockQueryResult({
+      data: [
+        {
+          ...mockSupabaseProduct,
+          image_url: "/images/components/asus-prime-h610m-e-d4.png",
+        },
+      ],
+      error: null,
+    });
+
+    const result = await fetchCatalogFromSupabase();
+    expect(result.success && result.data[0].image).toBeUndefined();
+  });
+
   it("devuelve éxito con catálogo vacío", async () => {
     mockQueryResult({ data: [], error: null });
     await expect(fetchCatalogFromSupabase()).resolves.toEqual({

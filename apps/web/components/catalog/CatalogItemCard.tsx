@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { CompareButton } from "@/components/compare/CompareButton";
+import { ComponentImage } from "@/components/catalog/ComponentImage";
 import { buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS, type ComponentCategory } from "@/lib/categories";
 import { getCatalogSpecBadges } from "@/lib/components/catalog";
@@ -62,7 +61,6 @@ export function CatalogItemCard({
   onAdd,
   prioritizeImage = false,
 }: CatalogItemCardProps) {
-  const [imageFailed, setImageFailed] = useState(false);
   const specs = getCatalogSpecBadges(component);
   const isUnavailable = component.inStock === false;
 
@@ -70,22 +68,17 @@ export function CatalogItemCard({
     <article className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 transition-[transform,border-color,box-shadow] duration-150 motion-reduce:transition-none motion-reduce:hover:transform-none hover:-translate-y-1 hover:border-[#0E79B2]/50 hover:shadow-lg hover:shadow-black/20">
       <div>
         <div className="relative mb-5 h-48 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#111119] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:h-52">
-          {component.image && !imageFailed ? (
-            <div className="relative h-full w-full">
-              <Image
-                src={component.image}
-                alt={`${component.name} de ${component.brand}`}
-                fill
-                sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                unoptimized
-                loading={prioritizeImage ? "eager" : "lazy"}
-                className="object-contain p-1 drop-shadow-[0_16px_24px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out motion-reduce:transition-none group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
-                onError={() => setImageFailed(true)}
-              />
-            </div>
-          ) : (
-            <CatalogImageFallback component={component} />
-          )}
+          <div className="relative h-full w-full">
+            <ComponentImage
+              src={component.image}
+              alt={`${component.name} de ${component.brand}`}
+              fill
+              sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+              loading={prioritizeImage ? "eager" : "lazy"}
+              className="object-contain p-1 drop-shadow-[0_16px_24px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out motion-reduce:transition-none group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
+              fallback={<CatalogImageFallback component={component} />}
+            />
+          </div>
         </div>
 
         <div className="mb-2 flex items-center justify-between gap-3">
