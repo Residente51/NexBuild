@@ -24,6 +24,8 @@ describe("request CSP", () => {
     expect(firstCsp).toContain("object-src 'none'");
     expect(firstCsp).toContain("strict-dynamic");
     expect(firstCsp).toContain("style-src-attr 'unsafe-inline'");
+    expect(firstCsp).not.toContain("style-src 'self' 'unsafe-inline'");
+    expect(firstCsp).not.toContain("'unsafe-eval'");
     expect(firstCsp.match(/'nonce-([^']+)'/)?.[1]).toBeTruthy();
     expect(firstCsp.match(/'nonce-([^']+)'/)?.[1]).not.toBe(
       secondCsp.match(/'nonce-([^']+)'/)?.[1],

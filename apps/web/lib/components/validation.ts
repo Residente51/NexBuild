@@ -3,6 +3,17 @@ import type { BuildSelection, PCComponent } from "@/types/component";
 
 type UnknownRecord = Record<string, unknown>;
 
+// These paths still exist in the catalog but their five identical placeholder
+// PNGs were deliberately removed when verified product imagery was introduced.
+// Treat them as absent until a real, attributable product asset is available.
+const UNAVAILABLE_LOCAL_IMAGE_PATHS = new Set([
+  "/images/components/asus-prime-h610m-e-d4.png",
+  "/images/components/asus-rog-strix-x670e-f-gaming-wifi.png",
+  "/images/components/asus-rog-thor-1000w-platinum-ii.png",
+  "/images/components/asus-tuf-gaming-geforce-rtx-4080-super.png",
+  "/images/components/asus-tuf-gaming-x570-plus.png",
+]);
+
 export const PRODUCT_SELECT =
   "id, slug, name, brand, category, specs, image_url, description, is_active, store_listings(price_cash, product_url, in_stock)";
 export const LEGACY_PRODUCT_SELECT =
@@ -63,7 +74,9 @@ function optionalHttpsUrl(value: unknown): string | undefined {
 
 function optionalImageSource(value: unknown): string | undefined {
   if (!isBoundedString(value, 2_048)) return undefined;
-  if (/^\/images\/[a-z0-9_./()%-]+$/i.test(value)) return value;
+  if (/^\/images\/[a-z0-9_./()%-]+$/i.test(value)) {
+    return UNAVAILABLE_LOCAL_IMAGE_PATHS.has(value) ? undefined : value;
+  }
   return optionalHttpsUrl(value);
 }
 

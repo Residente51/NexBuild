@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { AddToBuildButton } from "@/components/catalog/AddToBuildButton";
+import { ComponentImage } from "@/components/catalog/ComponentImage";
 import { CompareButton } from "@/components/compare/CompareButton";
 import { buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS } from "@/lib/categories";
@@ -32,26 +32,24 @@ export function ComponentDetailView({
       <article className="mt-4 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl shadow-black/20">
         <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12">
           <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/5 bg-white/5">
-            {component.image ? (
-              <Image
-                src={component.image}
-                alt={`${component.name} de ${component.brand}`}
-                fill
-                sizes="(min-width: 1024px) 45vw, 100vw"
-                unoptimized
-                className="object-contain p-6 sm:p-10"
-                priority
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                <p className="text-sm font-semibold uppercase tracking-widest text-[#38BDF8]">
-                  {categoryLabel}
-                </p>
-                <p className="mt-2 text-lg font-medium text-white/50">
-                  {component.brand}
-                </p>
-              </div>
-            )}
+            <ComponentImage
+              src={component.image}
+              alt={`${component.name} de ${component.brand}`}
+              fill
+              sizes="(min-width: 1024px) 45vw, 100vw"
+              className="object-contain p-6 sm:p-10"
+              priority
+              fallback={
+                <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                  <p className="text-sm font-semibold uppercase tracking-widest text-[#38BDF8]">
+                    {categoryLabel}
+                  </p>
+                  <p className="mt-2 text-lg font-medium text-white/50">
+                    {component.brand}
+                  </p>
+                </div>
+              }
+            />
           </div>
 
           <div className="flex min-w-0 flex-col justify-center">

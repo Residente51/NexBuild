@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { ComponentImage } from "@/components/catalog/ComponentImage";
 import { Button, buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
@@ -35,29 +35,25 @@ function hasDifference(values: string[]): boolean {
 }
 
 function ComparisonImage({ component }: { component: PCComponent }) {
-  const [hasError, setHasError] = useState(false);
   const categoryLabel = CATEGORY_LABELS[component.category];
 
   return (
     <div className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-white/5">
-      {component.image && !hasError ? (
-        <Image
-          src={component.image}
-          alt={`${component.name} de ${component.brand}`}
-          fill
-          sizes="240px"
-          unoptimized
-          className="object-contain p-3"
-          onError={() => setHasError(true)}
-        />
-      ) : (
-        <div className="px-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#38BDF8]">
-            {categoryLabel}
-          </p>
-          <p className="mt-1 text-sm text-white/50">{component.brand}</p>
-        </div>
-      )}
+      <ComponentImage
+        src={component.image}
+        alt={`${component.name} de ${component.brand}`}
+        fill
+        sizes="240px"
+        className="object-contain p-3"
+        fallback={
+          <div className="px-4 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#38BDF8]">
+              {categoryLabel}
+            </p>
+            <p className="mt-1 text-sm text-white/50">{component.brand}</p>
+          </div>
+        }
+      />
     </div>
   );
 }
