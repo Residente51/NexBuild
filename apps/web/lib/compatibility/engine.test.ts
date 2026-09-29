@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { evaluateBuild } from "@/lib/compatibility/engine";
+import {
+  estimateTotalWattage,
+  evaluateBuild,
+} from "@/lib/compatibility/engine";
 import {
   cpuRyzen7_7700X,
   mbMsiB650TomahawkWifi,
@@ -43,11 +46,85 @@ describe("Build Perfecta", () => {
     expect(report.issues).toHaveLength(0);
   });
 
-  it("estima un wattage total con sumatorias reales", () => {
-    const report = evaluateBuild(perfectBuild);
-    // CPU 105W + GPU board power 115W + MB 30W + RAM 6W
-    // + NVMe 5W + AIO 15W + case fans 10W = 286W
-    expect(report.totalWattageEstimated).toBe(286);
+  it("estima el wattage total con los datos de los componentes", () => {
+    expect(estimateTotalWattage(perfectBuild)).toBe(286);
+    expect(evaluateBuild(perfectBuild).totalWattageEstimated).toBe(286);
+  });
+});
+
+describe("Compatibilidad prioritaria del Builder", () => {
+  it("acepta CPU y placa madre con el mismo socket", () => {
+    const report = evaluateBuild({
+      storage: [],
+      cpu: cpuRyzen7_7700X,
+      motherboard: mbMsiB650TomahawkWifi,
+    });
+
+    expect(report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "CPU_MB_SOCKET_MISMATCH" }),
+      ]),
+    );
+  });
+
+  it("rechaza CPU y placa madre con sockets distintos", () => {
+    const report = evaluateBuild({
+      storage: [],
+      cpu: cpuRyzen7_7700X,
+      motherboard: mbGigabyteB760mDS3H,
+    });
+
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "CPU_MB_SOCKET_MISMATCH" }),
+      ]),
+    );
+  });
+
+  it("devuelve unknown cuando falta el socket de la CPU", () => {
+    const report = evaluateBuild({
+      storage: [],
+      cpu: {
+        ...cpuRyzen7_7700X,
+        specs: { ...cpuRyzen7_7700X.specs!, socket: "" },
+      },
+      motherboard: mbMsiB650TomahawkWifi,
+    });
+
+    expect(report.status).toBe("unknown");
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MISSING_CPU_SOCKET" }),
+      ]),
+    );
+  });
+
+  it("acepta RAM y placa madre de la misma generación", () => {
+    const report = evaluateBuild({
+      storage: [],
+      motherboard: mbMsiB650TomahawkWifi,
+      ram: ramCorsairVengeanceDdr5,
+    });
+
+    expect(report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "RAM_MB_TYPE_MISMATCH" }),
+      ]),
+    );
+  });
+
+  it("rechaza RAM y placa madre de generaciones distintas", () => {
+    const report = evaluateBuild({
+      storage: [],
+      motherboard: mbMsiB650TomahawkWifi,
+      ram: ramKingstonFuryDdr4,
+    });
+
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "RAM_MB_TYPE_MISMATCH" }),
+      ]),
+    );
   });
 });
 
@@ -104,7 +181,7 @@ describe("Build Frankenstein", () => {
     );
   });
 
-  it("detecta que el wattage de la fuente es insuficiente", () => {
+  it("detecta que el consumo estimado supera el wattage de la fuente", () => {
     expect(report.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "PSU_WATTAGE_EXCEEDED" }),
@@ -141,8 +218,8 @@ describe("Build Vacía", () => {
 
   const report = evaluateBuild(emptyBuild);
 
-  it("devuelve estado 'incomplete'", () => {
-    expect(report.status).toBe("incomplete");
+  it("devuelve estado 'unknown'", () => {
+    expect(report.status).toBe("unknown");
   });
 
   it("detecta que falta CPU", () => {
@@ -222,8 +299,8 @@ describe("Build Incompleta (falta specs)", () => {
 
   const report = evaluateBuild(incompleteSpecsBuild);
 
-  it("devuelve estado 'incomplete' cuando faltan specs críticas", () => {
-    expect(report.status).toBe("incomplete");
+  it("devuelve estado 'unknown' cuando faltan specs críticas", () => {
+    expect(report.status).toBe("unknown");
   });
 
   it("detecta que CPU no tiene specs definidas", () => {
@@ -242,10 +319,64 @@ describe("Build Incompleta (falta specs)", () => {
     );
   });
 
-  it("detecta que PSU no tiene wattage definido", () => {
+  it("marca como unknown una fuente sin wattage definido", () => {
     expect(report.issues).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "MISSING_PSU_WATTAGE" }),
+        expect.objectContaining({
+          code: "MISSING_PSU_WATTAGE",
+          status: "unknown",
+        }),
+      ]),
+    );
+  });
+
+});
+
+describe("Wattage de la fuente", () => {
+  const baseBuild: BuildSelection = {
+    cpu: cpuRyzen7_7700X,
+    motherboard: mbMsiB650TomahawkWifi,
+    ram: ramCorsairVengeanceDdr5,
+    gpu: gpuRtx4060,
+    storage: [storageNvme],
+    case: caseNzxtH6Flow,
+    cooler: coolerAio,
+    psu: psuCorsairRM850x,
+  };
+
+  it("advierte cuando la fuente está bajo la recomendación de la GPU", () => {
+    const report = evaluateBuild({ ...baseBuild, psu: psuEvga450BR });
+
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "PSU_BELOW_GPU_RECOMMENDATION",
+          status: "warning",
+        }),
+      ]),
+    );
+  });
+
+  it("advierte cuando la carga estimada supera el 80%", () => {
+    const report = evaluateBuild({
+      ...baseBuild,
+      gpu: {
+        ...gpuRtx4060,
+        specs: { ...gpuRtx4060.specs!, recommendedPsuWattage: 300 },
+      },
+      psu: {
+        ...psuCorsairRM850x,
+        id: "psu-350w",
+        specs: { ...psuCorsairRM850x.specs!, wattage: 350 },
+      },
+    });
+
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "PSU_WATTAGE_TIGHT",
+          status: "warning",
+        }),
       ]),
     );
   });
@@ -269,8 +400,8 @@ describe("Build Parcial (componentes opcionales faltan)", () => {
 
   const report = evaluateBuild(partialBuild);
 
-  it("devuelve estado 'incomplete' si faltan PSU o case", () => {
-    expect(report.status).toBe("incomplete");
+  it("devuelve estado 'unknown' si faltan PSU o case", () => {
+    expect(report.status).toBe("unknown");
   });
 
   it("detecta que falta PSU", () => {

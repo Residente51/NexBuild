@@ -11,7 +11,9 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
+import { evaluateBuild } from "@/lib/compatibility/engine";
 import type { BuildSelection, PCComponent, StorageComponent } from "@/types/component";
+import { ComponentThumbnail } from "./ComponentThumbnail";
 
 // ---------------------------------------------------------------------------
 // Spec badges — show the most relevant specs per category
@@ -97,6 +99,7 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   const setComponent = useBuildStore((s) => s.setComponent);
   const addStorage = useBuildStore((s) => s.addStorage);
   const reconcileCatalog = useBuildStore((s) => s.reconcileCatalog);
+  const build = useBuildStore((s) => s.build);
 
   const [catalog, setCatalog] = useState<PCComponent[]>([]);
   const [state, setState] = useState<CatalogState>("idle");
@@ -188,11 +191,27 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   }, [category]);
 
   const filteredWithBadges = useMemo(() => {
-    return filtered.map((item) => ({
-      item,
-      badges: getSpecBadges(item),
-    }));
-  }, [filtered]);
+    return filtered.map((item) => {
+      const candidateBuild: BuildSelection =
+        item.category === "storage"
+          ? {
+              ...build,
+              storage: [...build.storage, item as StorageComponent],
+            }
+          : { ...build, [item.category]: item };
+      const compatibilityIssues = evaluateBuild(candidateBuild).issues.filter(
+        (issue) =>
+          issue.status !== "unknown" &&
+          issue.componentCategories.includes(item.category),
+      );
+
+      return {
+        item,
+        badges: getSpecBadges(item),
+        compatibilityIssues,
+      };
+    });
+  }, [build, filtered]);
 
   if (!isOpen || !category) return null;
 
@@ -296,41 +315,73 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
           )}
           {state === "ready" && filtered.length > 0 && (
             <div className="space-y-4">
-              {filteredWithBadges.map(({ item, badges }) => {
+              {filteredWithBadges.map(({ item, badges, compatibilityIssues }) => {
+                const isIncompatible = compatibilityIssues.some(
+                  (issue) => issue.status === "incompatible",
+                );
+
                 return (
                   <div
                     key={item.id}
-                    className="group flex items-center justify-between gap-4 rounded-xl
+                    className="group flex flex-col gap-4 rounded-xl sm:flex-row sm:items-center sm:justify-between
                                border border-white/10 bg-white/5 p-6
                                transition-colors duration-200 hover:border-[#0E79B2]/40"
                   >
                     {/* Info */}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-white/60">
-                        {item.brand}
-                      </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-[#FBFEF9]">
-                        {item.name}
-                      </p>
+                    <div className="flex min-w-0 flex-1 items-start gap-4">
+                      <ComponentThumbnail component={item} className="h-20 w-20" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-white/60">
+                          {item.brand}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#FBFEF9]">
+                          {item.name}
+                        </p>
 
-                      {/* Spec badges */}
-                      {badges.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {badges.map((badge) => (
-                            <span
-                              key={badge}
-                              className="inline-block rounded-md bg-white/5 px-2.5
-                                         py-1 text-[11px] font-medium text-white/60"
+                        {badges.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {badges.map((badge) => (
+                              <span
+                                key={badge}
+                                className="inline-block rounded-md bg-white/5 px-2.5 py-1 text-[11px] font-medium text-white/60"
+                              >
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {compatibilityIssues.length > 0 && (
+                          <div
+                            className={`mt-3 rounded-lg border px-3 py-2 ${
+                              isIncompatible
+                                ? "border-builder-danger/20 bg-builder-danger/5"
+                                : "border-builder-warning/20 bg-builder-warning/5"
+                            }`}
+                          >
+                            <p
+                              className={`text-[11px] font-semibold ${
+                                isIncompatible
+                                  ? "text-builder-danger"
+                                  : "text-builder-warning"
+                              }`}
                             >
-                              {badge}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                              {isIncompatible
+                                ? "Incompatible con la selección actual"
+                                : "Advertencia de compatibilidad"}
+                            </p>
+                            <ul className="mt-1 space-y-1 text-[11px] leading-relaxed text-white/55">
+                              {compatibilityIssues.map((issue) => (
+                                <li key={issue.code}>{issue.message}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Price + action */}
-                    <div className="flex shrink-0 flex-col items-end gap-2">
+                    <div className="flex w-full shrink-0 items-center justify-between gap-3 sm:w-auto sm:flex-col sm:items-end">
                       <span className="text-sm font-bold tabular-nums text-[#38BDF8]">
                         {item.inStock === false
                           ? "Sin stock"

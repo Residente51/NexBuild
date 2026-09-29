@@ -16,7 +16,7 @@ const STATUS_LABELS: Record<CompatibilityStatus, string> = {
   compatible: "Compatible",
   warning: "Con advertencias",
   incompatible: "Incompatible",
-  incomplete: "Incompleto",
+  unknown: "Sin determinar",
 };
 
 const STATUS_CONFIG: Record<
@@ -30,7 +30,7 @@ const STATUS_CONFIG: Record<
     borderClass: "border-builder-success/30",
   },
   warning: {
-    label: "Advertencias",
+    label: "Con advertencias",
     dotClass: "bg-builder-warning",
     bgClass: "bg-builder-warning/10",
     borderClass: "border-builder-warning/30",
@@ -41,9 +41,9 @@ const STATUS_CONFIG: Record<
     bgClass: "bg-builder-danger/10",
     borderClass: "border-builder-danger/30",
   },
-  incomplete: {
-    label: "Incompleto",
-    dotClass: "bg-white/30",
+  unknown: {
+    label: "Sin determinar",
+    dotClass: "bg-white/35",
     bgClass: "bg-white/5",
     borderClass: "border-white/20",
   },
@@ -71,7 +71,7 @@ const ISSUE_GROUPS: Array<{
     surfaceClass: "border-builder-warning/20 bg-builder-warning/5",
   },
   {
-    status: "incomplete",
+    status: "unknown",
     label: "Partes o datos pendientes",
     colorClass: "text-white/70",
     dotClass: "bg-white/40",
@@ -98,10 +98,9 @@ function generateBuildText(
 
   for (const slot of EXPORT_SLOT_ORDER) {
     const component = build[slot];
-    const label = CATEGORY_LABELS[slot as ComponentCategory];
     if (component) {
       lines.push(
-        `${label}: ${component.name} - $${component.price.toLocaleString("es-CL")}`,
+        `${CATEGORY_LABELS[slot as ComponentCategory]}: ${component.name} - $${component.price.toLocaleString("es-CL")}`,
       );
     }
   }
@@ -122,6 +121,7 @@ function generateBuildText(
 interface BuildSummaryPanelProps {
   build: BuildSelection;
   totalPrice: number;
+  selectedCount: number;
   report: BuildCompatibilityReport;
   progress: BuildProgress;
   onClearBuild: () => void;
@@ -131,6 +131,7 @@ interface BuildSummaryPanelProps {
 export function BuildSummaryPanel({
   build,
   totalPrice,
+  selectedCount,
   report,
   progress,
   onClearBuild,
@@ -153,7 +154,6 @@ export function BuildSummaryPanel({
     ...group,
     issues: report.issues.filter((issue) => issue.status === group.status),
   })).filter((group) => group.issues.length > 0);
-
   const psuWattage = build.psu?.specs?.wattage;
   const psuLoadPercentage = psuWattage
     ? Math.round((report.totalWattageEstimated / psuWattage) * 100)
@@ -170,7 +170,7 @@ export function BuildSummaryPanel({
   );
   const isReady =
     progress.isComplete &&
-    report.status !== "incomplete" &&
+    report.status !== "unknown" &&
     report.status !== "incompatible";
 
   const handleCopy = useCallback(async () => {
@@ -251,26 +251,36 @@ export function BuildSummaryPanel({
                 : "Armado en progreso"}
         </p>
         <p className="mt-1 text-xs leading-relaxed text-white/55">
-          {isReady
-            ? "Ya puedes guardar y compartir esta configuración."
-            : progress.missingCategories.length > 0
-              ? `Faltan ${progress.missingCategories.length} ${
-                  progress.missingCategories.length === 1
-                    ? "parte requerida"
-                    : "partes requeridas"
-                }.`
-              : "Revisa las incidencias antes de compartir la configuración."}
+          {progress.missingCategories.length > 0
+            ? `Faltan ${progress.missingCategories.length} ${
+                progress.missingCategories.length === 1
+                  ? "parte requerida"
+                  : "partes requeridas"
+              }.`
+            : report.status === "unknown"
+              ? "La selección está completa, pero faltan datos para confirmar compatibilidad."
+              : "Todas las partes requeridas están seleccionadas."}
         </p>
       </div>
 
-      <div className="rounded-xl border border-[#0E79B2]/30 bg-[#0E79B2]/10 p-6">
-        <p className="text-xs font-semibold tracking-wide text-[#7DD3FC] uppercase">
-          Total estimado
-        </p>
-        <p className="mt-2 text-4xl font-black tracking-tight tabular-nums text-[#FBFEF9]">
-          ${totalPrice.toLocaleString("es-CL")}
-        </p>
-        <p className="mt-1 text-xs text-white/45">CLP</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-[#0E79B2]/30 bg-[#0E79B2]/10 p-5">
+          <p className="text-xs font-semibold tracking-wide text-[#7DD3FC] uppercase">
+            Piezas
+          </p>
+          <p className="mt-2 text-3xl font-black tabular-nums text-[#FBFEF9]">
+            {selectedCount}
+          </p>
+        </div>
+        <div className="rounded-xl border border-[#0E79B2]/30 bg-[#0E79B2]/10 p-5">
+          <p className="text-xs font-semibold tracking-wide text-[#7DD3FC] uppercase">
+            Precio total
+          </p>
+          <p className="mt-2 text-xl font-black tracking-tight tabular-nums text-[#FBFEF9] sm:text-2xl">
+            ${totalPrice.toLocaleString("es-CL")}
+          </p>
+          <p className="mt-1 text-xs text-white/45">CLP</p>
+        </div>
       </div>
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -351,13 +361,13 @@ export function BuildSummaryPanel({
           <div
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${statusCfg.bgClass} ${statusCfg.borderClass}`}
           >
-            <span className={`inline-block h-2 w-2 rounded-full ${statusCfg.dotClass}`} />
+            <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-full ${statusCfg.dotClass}`} />
             <span className="text-builder-text">{statusCfg.label}</span>
           </div>
         </div>
 
         {groupedIssues.length > 0 ? (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-3" aria-live="polite">
             {groupedIssues.map((group) => (
               <section
                 key={group.status}
@@ -377,6 +387,7 @@ export function BuildSummaryPanel({
                       className="flex items-start gap-2 text-xs leading-relaxed text-white/60"
                     >
                       <span
+                        aria-hidden="true"
                         className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${group.dotClass}`}
                       />
                       <span>{issue.message}</span>
@@ -403,7 +414,7 @@ export function BuildSummaryPanel({
             type="button"
             onClick={handleSaveToCloud}
             disabled={isSaving}
-            className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-colors disabled:cursor-wait disabled:opacity-50 ${
+            className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8] disabled:cursor-wait disabled:opacity-50 ${
               savedUrlCopied
                 ? "bg-builder-success/15 text-builder-success"
                 : isReady
@@ -430,7 +441,7 @@ export function BuildSummaryPanel({
               </p>
               <a
                 href={savedUrl}
-                className="mt-2 block break-all text-xs text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
+                className="mt-2 block break-all text-xs text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
               >
                 {savedUrl}
               </a>
@@ -441,7 +452,7 @@ export function BuildSummaryPanel({
             type="button"
             onClick={handleCopy}
             aria-live="polite"
-            className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8] ${
               copied
                 ? "border-builder-success/30 bg-builder-success/10 text-builder-success"
                 : "border-white/15 bg-transparent text-white/70 hover:bg-white/5 hover:text-white"
@@ -453,7 +464,7 @@ export function BuildSummaryPanel({
           <button
             type="button"
             onClick={onClearBuild}
-            className="min-h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/60 transition-colors hover:border-builder-danger/40 hover:text-builder-danger"
+            className="min-h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/60 transition-colors hover:border-builder-danger/40 hover:text-builder-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38BDF8]"
           >
             Limpiar configuración
           </button>
