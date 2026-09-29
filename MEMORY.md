@@ -1,6 +1,6 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-09-27
+Updated: 2026-09-28
 
 ## Current Snapshot
 
@@ -24,6 +24,8 @@ Updated: 2026-09-27
 - Basic static metadata exists for `/components`, `/builder`, and `/compare`.
 - `/login`, `/builds`, and `/guides` use `noindex, nofollow`.
 - Technical SEO is complete: site-wide metadata base, canonicals, Open Graph, dynamic product metadata, `robots.txt`, resilient `sitemap.xml`, and `noindex, nofollow` for shared builds.
+- Home 2.0 is the current product-focused homepage base through `d81891f`.
+- Institutional 1.0 adds a reusable global footer plus public `/about`, `/contact`, `/privacy`, and `/terms` routes with factual copy, route metadata, and sitemap entries. The main product navigation remains unchanged.
 - `nexbuild.games` was validated working over HTTPS.
 - Production `NEXT_PUBLIC_SITE_URL` was set to `https://nexbuild.games`.
 - Supabase Site URL was set to `https://nexbuild.games`.

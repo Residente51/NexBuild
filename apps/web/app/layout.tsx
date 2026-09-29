@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import "./globals.css";
@@ -64,13 +65,16 @@ export default async function RootLayout({
           Saltar al contenido principal
         </a>
         <Navbar isAuthenticated={Boolean(user)} />
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="h-full min-w-0 flex-1 overflow-y-auto p-4 lg:p-8"
-        >
-          {children}
-        </main>
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="min-w-0 p-4 lg:p-8"
+          >
+            {children}
+          </main>
+          <Footer />
+        </div>
       </body>
     </html>
   );

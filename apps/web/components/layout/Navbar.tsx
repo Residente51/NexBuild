@@ -105,7 +105,6 @@ function SidebarContent({
             Iniciar sesión
           </Link>
         )}
-        <p className="text-xs text-white/40">© 2026 NexBuild</p>
       </div>
     </>
   );
