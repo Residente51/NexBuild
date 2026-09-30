@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
+import { trackProductEvent } from "@/lib/analytics";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import type { BuildSelection, PCComponent, StorageComponent } from "@/types/component";
 
@@ -207,6 +208,10 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
         item,
       );
     }
+    trackProductEvent("component_added", {
+      category: item.category,
+      source: "builder",
+    });
     onClose();
   }
 

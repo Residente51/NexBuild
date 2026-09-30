@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { CATEGORY_LABELS } from "@/lib/categories";
+import { trackProductEvent } from "@/lib/analytics";
 import type { ComponentCategory } from "@/lib/categories";
 import type { BuildProgress } from "@/lib/build/progress";
 import { useBuildStore } from "@/store/useBuildStore";
@@ -179,6 +180,7 @@ export function BuildSummaryPanel({
       await navigator.clipboard.writeText(
         generateBuildText(build, totalPrice, report.status),
       );
+      trackProductEvent("build_shared", { method: "configuration_copy" });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -194,11 +196,13 @@ export function BuildSummaryPanel({
       setSavedBuildSignature(null);
       const id = await saveBuildToCloud();
       if (id) {
+        trackProductEvent("build_saved", {});
         const url = `${window.location.origin}/build/${id}`;
         setSavedUrl(url);
         setSavedBuildSignature(buildSignature);
         try {
           await navigator.clipboard.writeText(url);
+          trackProductEvent("build_shared", { method: "link_copy" });
           setSavedUrlCopied(true);
           setTimeout(() => setSavedUrlCopied(false), 3000);
         } catch {

@@ -44,6 +44,10 @@ const PRIVACY_SECTIONS = [
     title: "Datos técnicos mínimos",
     body: "La aplicación y sus proveedores de infraestructura pueden procesar datos técnicos básicos de una solicitud, como dirección IP, información del navegador y marcas de tiempo, para entregar, proteger y diagnosticar el servicio.",
   },
+  {
+    title: "Analítica básica",
+    body: "NexBuild usa Vercel Web Analytics para medir visitas y algunas acciones generales del producto. Desde NexBuild no se envían correos, identificadores de cuenta, identificadores de builds ni el contenido de tus configuraciones como eventos de analítica.",
+  },
 ] as const;
 
 export default function PrivacyPage() {
@@ -83,12 +87,15 @@ export default function PrivacyPage() {
           Estado actual
         </p>
         <h2 id="analytics-title" className="mt-3 text-2xl font-black tracking-tight text-[#FBFEF9]">
-          Sin analytics de producto implementado
+          Analítica acotada y sin cookies propias
         </h2>
         <p className="mt-4 max-w-3xl text-base leading-relaxed text-white/65">
-          NexBuild no incorpora actualmente una herramienta propia de analytics para
-          seguir tu navegación o medir tu comportamiento dentro del producto. Si esto
-          cambia, esta información deberá actualizarse para reflejarlo.
+          Vercel Web Analytics entrega métricas agregadas de navegación y eventos
+          seleccionados para entender qué funciones resultan útiles. NexBuild no añade
+          cookies propias para esta analítica, excluye las rutas privadas y compartidas,
+          y elimina los parámetros de las URLs antes del envío. Vercel también puede
+          procesar datos técnicos de la solicitud según su propia infraestructura y
+          documentación.
         </p>
       </section>
     </article>

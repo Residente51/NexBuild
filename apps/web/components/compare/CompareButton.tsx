@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { trackProductEvent } from "@/lib/analytics";
 import {
   hydrateComparisonStore,
   useComparisonStore,
@@ -12,6 +13,7 @@ import type { PCComponent } from "@/types/component";
 
 interface CompareButtonProps {
   component: Pick<PCComponent, "slug" | "category">;
+  source: "catalog" | "detail" | "home";
   className?: string;
 }
 
@@ -35,6 +37,7 @@ function getFailureMessage(
 
 export function CompareButton({
   component,
+  source,
   className = "",
 }: CompareButtonProps) {
   const items = useComparisonStore((state) => state.items);
@@ -58,6 +61,13 @@ export function CompareButton({
         slug: component.slug,
         category: component.category,
       });
+
+      if (result.success) {
+        trackProductEvent("comparison_added", {
+          category: component.category,
+          source,
+        });
+      }
 
       setFeedback(
         result.success

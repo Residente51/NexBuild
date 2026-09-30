@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { trackProductEvent } from "@/lib/analytics";
 import { useBuildStore } from "@/store/useBuildStore";
 import type {
   BuildSelection,
@@ -36,6 +37,11 @@ export function AddToBuildButton({ component }: AddToBuildButtonProps) {
         component,
       );
     }
+
+    trackProductEvent("component_added", {
+      category: component.category,
+      source: "detail",
+    });
 
     router.push("/builder");
   }

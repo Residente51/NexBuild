@@ -69,7 +69,7 @@ export function ComponentCard({
             </a>
           )}
 
-          <CompareButton component={component} />
+          <CompareButton component={component} source="home" />
         </div>
       </div>
     </article>

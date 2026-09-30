@@ -92,6 +92,7 @@ export function ComponentDetailView({
               <AddToBuildButton component={component} />
               <CompareButton
                 component={component}
+                source="detail"
                 className="w-full sm:w-auto"
               />
               {component.productUrl && (

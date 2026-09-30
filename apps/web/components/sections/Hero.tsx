@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HomeCtaLink } from "@/components/analytics/HomeCtaLink";
 import { buttonClassName } from "@/components/ui/Button";
 
 interface HeroProps {
@@ -47,13 +47,23 @@ export function Hero({ componentCount, catalogError }: HeroProps) {
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link href="/builder" className={buttonClassName("primary", "w-full sm:w-auto")}>
+            <HomeCtaLink
+              href="/builder"
+              destination="builder"
+              placement="hero"
+              className={buttonClassName("primary", "w-full sm:w-auto")}
+            >
               Crear mi PC
               <span aria-hidden="true" className="ml-2">→</span>
-            </Link>
-            <Link href="/components" className={buttonClassName("secondary", "w-full sm:w-auto")}>
+            </HomeCtaLink>
+            <HomeCtaLink
+              href="/components"
+              destination="catalog"
+              placement="hero"
+              className={buttonClassName("secondary", "w-full sm:w-auto")}
+            >
               Explorar componentes
-            </Link>
+            </HomeCtaLink>
           </div>
 
           <dl className="mt-12 grid max-w-2xl grid-cols-1 gap-4 border-t border-white/10 pt-7 sm:grid-cols-3">

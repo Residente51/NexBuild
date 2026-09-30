@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HomeCtaLink } from "@/components/analytics/HomeCtaLink";
 import { ComponentCard } from "@/components/catalog/ComponentCard";
 import { Hero } from "@/components/sections/Hero";
 import { buttonClassName } from "@/components/ui/Button";
@@ -215,12 +216,22 @@ export default async function Home() {
           Elige tus componentes, revisa la compatibilidad y entiende tu configuración antes de tomar una decisión.
         </p>
         <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/builder" className={buttonClassName("primary", "w-full sm:w-auto")}>
+          <HomeCtaLink
+            href="/builder"
+            destination="builder"
+            placement="final"
+            className={buttonClassName("primary", "w-full sm:w-auto")}
+          >
             Crear mi PC<span aria-hidden="true" className="ml-2">→</span>
-          </Link>
-          <Link href="/components" className={buttonClassName("secondary", "w-full sm:w-auto")}>
+          </HomeCtaLink>
+          <HomeCtaLink
+            href="/components"
+            destination="catalog"
+            placement="final"
+            className={buttonClassName("secondary", "w-full sm:w-auto")}
+          >
             Explorar componentes
-          </Link>
+          </HomeCtaLink>
         </div>
       </section>
     </div>

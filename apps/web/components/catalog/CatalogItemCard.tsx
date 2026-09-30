@@ -153,7 +153,11 @@ export function CatalogItemCard({
             {isUnavailable ? "No disponible" : isAdded ? "Añadido" : "Añadir"}
           </button>
 
-          <CompareButton component={component} className="col-span-2" />
+          <CompareButton
+            component={component}
+            source="catalog"
+            className="col-span-2"
+          />
 
           {component.productUrl && (
             <a
