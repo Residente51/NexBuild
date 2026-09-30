@@ -1,6 +1,6 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-09-28
+Updated: 2026-09-29
 
 ## Current Snapshot
 
@@ -27,6 +27,7 @@ Updated: 2026-09-28
 - Home 2.0 is the current product-focused homepage base through `d81891f`.
 - Institutional 1.0 adds a reusable global footer plus public `/about`, `/contact`, `/privacy`, and `/terms` routes with factual copy, route metadata, and sitemap entries. The main product navigation remains unchanged.
 - Public polish 1.0 filters five stale ASUS image paths whose identical placeholder PNGs were removed in `8cd99b2`, uses a shared runtime image fallback across home, catalog, detail, and comparison, and lets local PNGs use Next image optimization. Production CSP remains strict; the observed inline-style warnings originate only from the Next.js development-tools bundle.
+- Analytics 1.0 is implemented on `feat/analytics` with Vercel Web Analytics 2.0.1. Page views are limited to `nexbuild.games`; query strings are removed, component-detail paths are normalized, and Auth, login, owned-build, and shared-build routes are excluded. Product events cover Home CTAs, Builder use, component additions, comparison additions, authenticated saves, and copy/share actions using only generic category, source, placement, destination, or method properties.
 - `nexbuild.games` was validated working over HTTPS.
 - Production `NEXT_PUBLIC_SITE_URL` was set to `https://nexbuild.games`.
 - Supabase Site URL was set to `https://nexbuild.games`.
@@ -79,3 +80,9 @@ The production and real-Auth facts above record the validated end-of-session sta
 - `pnpm.cmd --dir apps/web check`, `pnpm.cmd --dir apps/web build`, and `git diff --check` passed with 18 test files and 105 tests.
 - Production browser QA covered `/`, `/components`, a real ASUS detail route, `/compare`, `/builder`, `/about`, `/contact`, `/privacy`, and `/terms` at 1440x900 and 390x844 with no HTTP errors, broken images, console errors/warnings, or horizontal overflow.
 - The five ASUS products intentionally render category fallbacks until verified, attributable product images are available; no placeholder assets were reintroduced and Supabase was not modified.
+
+## Analytics 1.0 Validation
+
+- `pnpm.cmd --dir apps/web check`, `pnpm.cmd --dir apps/web build`, and `git diff --check` passed with 19 test files and 111 tests.
+- Local browser QA covered `/`, `/components`, a component detail route, `/builder`, `/compare`, and `/privacy` at 1440x900 and 390x844 with no horizontal overflow or console warnings/errors. Analytics scripts and requests were absent on localhost as intended.
+- No CSP change was required because the official integration uses Vercel's same-origin analytics routes. Vercel Web Analytics still needs to be enabled in the project dashboard and redeployed; custom events require a Vercel plan that supports them.

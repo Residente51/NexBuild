@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ProductAnalytics } from "@/components/analytics/ProductAnalytics";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -75,6 +76,7 @@ export default async function RootLayout({
           </main>
           <Footer />
         </div>
+        <ProductAnalytics />
       </body>
     </html>
   );

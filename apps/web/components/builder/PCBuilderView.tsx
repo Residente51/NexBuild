@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { getBuildProgress } from "@/lib/build/progress";
+import { trackProductEventOnce } from "@/lib/analytics";
 import type { ComponentCategory } from "@/lib/categories";
 import type { BuildSelection, StorageComponent } from "@/types/component";
 import { SlotRow } from "./SlotRow";
@@ -117,6 +118,8 @@ export function PCBuilderView() {
   const [activeCategory, setActiveCategory] = useState<keyof BuildSelection | null>(null);
 
   useEffect(() => {
+    trackProductEventOnce("builder_used", {});
+
     let active = true;
     void Promise.resolve(useBuildStore.persist.rehydrate())
       .catch(() => undefined)

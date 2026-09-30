@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CatalogItemCard } from "@/components/catalog/CatalogItemCard";
 import { Button } from "@/components/ui/Button";
 import { CATEGORY_LABELS } from "@/lib/categories";
+import { trackProductEvent } from "@/lib/analytics";
 import {
   filterAndSortCatalog,
   getCatalogBrands,
@@ -128,6 +129,11 @@ export function CatalogView({ initialResult }: CatalogViewProps) {
           component,
         );
       }
+
+      trackProductEvent("component_added", {
+        category: component.category,
+        source: "catalog",
+      });
 
       const previousTimer = addedTimers.current.get(component.id);
       if (previousTimer) clearTimeout(previousTimer);
