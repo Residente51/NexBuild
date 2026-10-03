@@ -30,6 +30,7 @@ Updated: 2026-10-03
 - Analytics 1.0 is implemented on `feat/analytics` with Vercel Web Analytics 2.0.1. Page views are limited to `nexbuild.games`; query strings are removed, component-detail paths are normalized, and Auth, login, owned-build, and shared-build routes are excluded. Product events cover Home CTAs, Builder use, component additions, comparison additions, authenticated saves, and copy/share actions using only generic category, source, placement, destination, or method properties.
 - Performance & Mobile Audit 1.0 is complete on `perf/public-audit`: the Home featured-catalog header now stays stacked through tablet widths to prevent a clipped CTA, and the first visible catalog image receives high fetch priority while later images remain lazy.
 - Builder guiado v1 is complete on `feat/guided-builder-v1`: `/builder` now offers an optional three-question guide with a separate persisted profile store, deterministic budget/category strategy, compatibility-aware candidate ranking, and a persistent summary above the unchanged manual Builder. It uses no AI, generates no complete build, and makes no benchmark or FPS claims.
+- Budget & Recommendations 1.1 is complete on `feat/budget-recommendations-v1`: the guided summary now shows deterministic category budget targets, spend, deviations, progress, and compatibility; the catalog highlights up to three guided candidates with explanations derived only from available price, compatibility, stock, and specification data. It uses no AI or benchmarks and keeps manual catalog choice available.
 - `nexbuild.games` was validated working over HTTPS.
 - Production `NEXT_PUBLIC_SITE_URL` was set to `https://nexbuild.games`.
 - Supabase Site URL was set to `https://nexbuild.games`.
@@ -103,3 +104,10 @@ The production and real-Auth facts above record the validated end-of-session sta
 - Eight focused guidance tests cover profile budgets, deterministic next category, incompatible-candidate exclusion, profile and priority ranking differences, missing specs, immutable build simulation, and empty fallback behavior.
 - Browser QA at 1440x900, 768x1024, and 390x844 found no horizontal overflow, visible controls below 44 px, or console warnings/errors. Wizard validation, guided catalog ordering, overspend display, persistence after reload, and preservation of the real build while editing or disabling the guide were verified.
 - `pnpm.cmd --dir apps/web check` passed with 20 test files and 119 tests; `pnpm.cmd --dir apps/web build` and `git diff --check` passed.
+
+## Budget & Recommendations 1.1 Validation
+
+- The pure guidance engine owns exact category-budget allocation, multi-storage spend, budget status, full-build breakdowns, and deterministic candidate explanations; `useBuildStore`, `useGuidedBuilderStore`, and `evaluateBuild()` keep their existing responsibilities.
+- Eight focused tests were added for spend and multi-storage totals, within/over/under status, exact budget allocation, priority-specific budget reasons, supported iGPU/RAM/NVMe/VRAM reasons, missing-spec fallbacks, determinism, and immutability.
+- Browser QA at 1440x900, 768x1024, and 390x844 found no horizontal overflow, visible controls below 44 px, or console warnings/errors. It covered guide persistence after reload, immediate budget updates on selection/removal, priority-dependent reasons, edit/disable preserving the build, and the unchanged manual catalog flow.
+- `pnpm.cmd --dir apps/web check` passed with 20 test files and 127 tests; `pnpm.cmd --dir apps/web build` and `git diff --check` passed.

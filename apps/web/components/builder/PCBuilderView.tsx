@@ -200,7 +200,8 @@ export function PCBuilderView() {
         <GuidedBuilderSummary
           profile={guideProfile}
           build={build}
-          totalPrice={totalPrice}
+          report={report}
+          progress={progress}
           onOpenCategory={openCatalog}
           onEdit={openGuideWizard}
           onDisable={disableGuide}
