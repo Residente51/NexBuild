@@ -12,7 +12,7 @@ import { useBuildStore } from "@/store/useBuildStore";
 import { useGuidedBuilderStore } from "@/store/useGuidedBuilderStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { trackProductEvent } from "@/lib/analytics";
-import { rankGuidedCandidates } from "@/lib/build/guidance";
+import { rankGuidedCandidateDetails } from "@/lib/build/guidance";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import type { BuildSelection, PCComponent, StorageComponent } from "@/types/component";
 
@@ -195,9 +195,9 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
       : String(category);
   }, [category]);
 
-  const rankedItems = useMemo(() => {
+  const rankedDetails = useMemo(() => {
     if (!guideEnabled || !category) return [];
-    return rankGuidedCandidates(
+    return rankGuidedCandidateDetails(
       { useCase: guideUseCase, budget: guideBudget, priority: guidePriority },
       build,
       filtered,
@@ -206,7 +206,11 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   }, [build, category, filtered, guideBudget, guideEnabled, guidePriority, guideUseCase]);
 
   const orderedWithBadges = useMemo(() => {
+    const rankedItems = rankedDetails.map(({ component }) => component);
     const rankedIds = new Set(rankedItems.map((item) => item.id));
+    const highlightedReasons = new Map(
+      rankedDetails.slice(0, 3).map(({ component, reasons }) => [component.id, reasons.slice(0, 3)]),
+    );
     const ordered = guideEnabled
       ? [...rankedItems, ...filtered.filter((item) => !rankedIds.has(item.id))]
       : filtered;
@@ -214,9 +218,10 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
     return ordered.map((item) => ({
       item,
       badges: getSpecBadges(item),
-      isRecommended: rankedIds.has(item.id),
+      reasons: highlightedReasons.get(item.id) ?? [],
+      isRecommended: highlightedReasons.has(item.id),
     }));
-  }, [filtered, guideEnabled, rankedItems]);
+  }, [filtered, guideEnabled, rankedDetails]);
 
   if (!isOpen || !category) return null;
 
@@ -330,19 +335,20 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                     Recomendados para tu guía
                   </p>
                   <p className="mt-1 text-xs text-white/55">
-                    {rankedItems.length > 0
-                      ? "Las opciones compatibles se ordenan según tu perfil y presupuesto. El resto del catálogo sigue disponible."
+                    {rankedDetails.length > 0
+                      ? "Las opciones compatibles se ordenan según tu perfil y presupuesto. Destacamos tres con razones verificables; el resto del catálogo sigue disponible."
                       : "No encontramos recomendaciones compatibles con la información actual. Puedes revisar todo el catálogo."}
                   </p>
                 </div>
               )}
-              {orderedWithBadges.map(({ item, badges, isRecommended }) => {
+              {orderedWithBadges.map(({ item, badges, reasons, isRecommended }) => {
                 return (
                   <div
                     key={item.id}
-                    className="group flex items-center justify-between gap-4 rounded-xl
+                    className="group flex flex-col items-stretch justify-between gap-4 rounded-xl
                                border border-white/10 bg-white/5 p-6
-                               transition-colors duration-200 hover:border-[#0E79B2]/40"
+                               transition-colors duration-200 hover:border-[#0E79B2]/40
+                               sm:flex-row sm:items-center"
                   >
                     {/* Info */}
                     <div className="min-w-0 flex-1">
@@ -354,9 +360,19 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                       </p>
 
                       {guideEnabled && isRecommended && (
-                        <span className="mt-2 inline-flex rounded-full bg-[#0E79B2]/20 px-2.5 py-1 text-[11px] font-semibold text-[#7DD3FC]">
-                          Recomendado para tu guía
-                        </span>
+                        <>
+                          <span className="mt-2 inline-flex rounded-full bg-[#0E79B2]/20 px-2.5 py-1 text-[11px] font-semibold text-[#7DD3FC]">
+                            Recomendado para tu guía
+                          </span>
+                          <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-white/65">
+                            {reasons.map((reason) => (
+                              <li key={reason} className="flex items-start gap-2">
+                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#38BDF8]" />
+                                <span>{reason}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
                       )}
 
                       {/* Spec badges */}
@@ -376,7 +392,7 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                     </div>
 
                     {/* Price + action */}
-                    <div className="flex shrink-0 flex-col items-end gap-2">
+                    <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:gap-2">
                       <span className="text-sm font-bold tabular-nums text-[#38BDF8]">
                         {item.inStock === false
                           ? "Sin stock"
