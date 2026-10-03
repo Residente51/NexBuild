@@ -9,8 +9,10 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
+import { useGuidedBuilderStore } from "@/store/useGuidedBuilderStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { trackProductEvent } from "@/lib/analytics";
+import { rankGuidedCandidates } from "@/lib/build/guidance";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 import type { BuildSelection, PCComponent, StorageComponent } from "@/types/component";
 
@@ -98,6 +100,11 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   const setComponent = useBuildStore((s) => s.setComponent);
   const addStorage = useBuildStore((s) => s.addStorage);
   const reconcileCatalog = useBuildStore((s) => s.reconcileCatalog);
+  const build = useBuildStore((s) => s.build);
+  const guideEnabled = useGuidedBuilderStore((s) => s.enabled);
+  const guideUseCase = useGuidedBuilderStore((s) => s.useCase);
+  const guideBudget = useGuidedBuilderStore((s) => s.budget);
+  const guidePriority = useGuidedBuilderStore((s) => s.priority);
 
   const [catalog, setCatalog] = useState<PCComponent[]>([]);
   const [state, setState] = useState<CatalogState>("idle");
@@ -188,12 +195,28 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
       : String(category);
   }, [category]);
 
-  const filteredWithBadges = useMemo(() => {
-    return filtered.map((item) => ({
+  const rankedItems = useMemo(() => {
+    if (!guideEnabled || !category) return [];
+    return rankGuidedCandidates(
+      { useCase: guideUseCase, budget: guideBudget, priority: guidePriority },
+      build,
+      filtered,
+      category,
+    );
+  }, [build, category, filtered, guideBudget, guideEnabled, guidePriority, guideUseCase]);
+
+  const orderedWithBadges = useMemo(() => {
+    const rankedIds = new Set(rankedItems.map((item) => item.id));
+    const ordered = guideEnabled
+      ? [...rankedItems, ...filtered.filter((item) => !rankedIds.has(item.id))]
+      : filtered;
+
+    return ordered.map((item) => ({
       item,
       badges: getSpecBadges(item),
+      isRecommended: rankedIds.has(item.id),
     }));
-  }, [filtered]);
+  }, [filtered, guideEnabled, rankedItems]);
 
   if (!isOpen || !category) return null;
 
@@ -301,7 +324,19 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
           )}
           {state === "ready" && filtered.length > 0 && (
             <div className="space-y-4">
-              {filteredWithBadges.map(({ item, badges }) => {
+              {guideEnabled && (
+                <div className="rounded-xl border border-[#38BDF8]/20 bg-[#0E79B2]/10 px-4 py-3">
+                  <p className="text-sm font-semibold text-[#7DD3FC]">
+                    Recomendados para tu guía
+                  </p>
+                  <p className="mt-1 text-xs text-white/55">
+                    {rankedItems.length > 0
+                      ? "Las opciones compatibles se ordenan según tu perfil y presupuesto. El resto del catálogo sigue disponible."
+                      : "No encontramos recomendaciones compatibles con la información actual. Puedes revisar todo el catálogo."}
+                  </p>
+                </div>
+              )}
+              {orderedWithBadges.map(({ item, badges, isRecommended }) => {
                 return (
                   <div
                     key={item.id}
@@ -317,6 +352,12 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                       <p className="mt-1 truncate text-sm font-semibold text-[#FBFEF9]">
                         {item.name}
                       </p>
+
+                      {guideEnabled && isRecommended && (
+                        <span className="mt-2 inline-flex rounded-full bg-[#0E79B2]/20 px-2.5 py-1 text-[11px] font-semibold text-[#7DD3FC]">
+                          Recomendado para tu guía
+                        </span>
+                      )}
 
                       {/* Spec badges */}
                       {badges.length > 0 && (
