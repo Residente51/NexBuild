@@ -75,6 +75,7 @@ export function CatalogItemCard({
               fill
               sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
               loading={prioritizeImage ? "eager" : "lazy"}
+              fetchPriority={prioritizeImage ? "high" : "auto"}
               className="object-contain p-1 drop-shadow-[0_16px_24px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out motion-reduce:transition-none group-hover:scale-[1.04] motion-reduce:group-hover:scale-100"
               fallback={<CatalogImageFallback component={component} />}
             />
