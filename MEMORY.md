@@ -1,6 +1,6 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-09-29
+Updated: 2026-10-03
 
 ## Current Snapshot
 
@@ -28,6 +28,7 @@ Updated: 2026-09-29
 - Institutional 1.0 adds a reusable global footer plus public `/about`, `/contact`, `/privacy`, and `/terms` routes with factual copy, route metadata, and sitemap entries. The main product navigation remains unchanged.
 - Public polish 1.0 filters five stale ASUS image paths whose identical placeholder PNGs were removed in `8cd99b2`, uses a shared runtime image fallback across home, catalog, detail, and comparison, and lets local PNGs use Next image optimization. Production CSP remains strict; the observed inline-style warnings originate only from the Next.js development-tools bundle.
 - Analytics 1.0 is implemented on `feat/analytics` with Vercel Web Analytics 2.0.1. Page views are limited to `nexbuild.games`; query strings are removed, component-detail paths are normalized, and Auth, login, owned-build, and shared-build routes are excluded. Product events cover Home CTAs, Builder use, component additions, comparison additions, authenticated saves, and copy/share actions using only generic category, source, placement, destination, or method properties.
+- Performance & Mobile Audit 1.0 is complete on `perf/public-audit`: the Home featured-catalog header now stays stacked through tablet widths to prevent a clipped CTA, and the first visible catalog image receives high fetch priority while later images remain lazy.
 - `nexbuild.games` was validated working over HTTPS.
 - Production `NEXT_PUBLIC_SITE_URL` was set to `https://nexbuild.games`.
 - Supabase Site URL was set to `https://nexbuild.games`.
@@ -86,3 +87,11 @@ The production and real-Auth facts above record the validated end-of-session sta
 - `pnpm.cmd --dir apps/web check`, `pnpm.cmd --dir apps/web build`, and `git diff --check` passed with 19 test files and 111 tests.
 - Local browser QA covered `/`, `/components`, a component detail route, `/builder`, `/compare`, and `/privacy` at 1440x900 and 390x844 with no horizontal overflow or console warnings/errors. Analytics scripts and requests were absent on localhost as intended.
 - No CSP change was required because the official integration uses Vercel's same-origin analytics routes. Vercel Web Analytics still needs to be enabled in the project dashboard and redeployed; custom events require a Vercel plan that supports them.
+
+## Performance & Mobile Audit 1.0 Validation
+
+- Production baseline covered `/`, `/components`, `/builder`, and `/compare` at 1440x900, 390x844, and 768x1024. Responses were successful, no global horizontal overflow or console errors were observed, and production Analytics returned 200 for its same-origin script and page-view request without weakening CSP.
+- The concrete tablet defect was a featured-catalog CTA extending 24 px past the 768 px viewport in the deployed layout. The corrected production build keeps the section stacked at that width and inside its container.
+- Local production-build QA covered the four priority routes plus `/about`, `/contact`, `/privacy`, and `/terms` on desktop and 390x844, with the priority routes also checked at 768x1024. It found no HTTP errors, new console warnings/errors, global overflow, or visible interactive targets below 44 px.
+- Mobile interaction QA covered the navigation drawer, Builder catalog modal, and a populated two-item comparison table. The modal stayed inside the viewport with scroll lock, and the wide comparison remained contained in its own horizontal scroll region with a sticky first column.
+- `pnpm.cmd --dir apps/web check` passed with 19 test files and 111 tests; `pnpm.cmd --dir apps/web build` and `git diff --check` passed. Field LCP, CLS, and INP were not available from Vercel Speed Insights in this session; browser lab evidence used FMP, DOM timing, task/script/layout duration, request/transfer counts, and direct layout measurements instead.

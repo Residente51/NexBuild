@@ -172,7 +172,7 @@ export default async function Home() {
         className="rounded-[2rem] border border-white/10 bg-white/[0.025] px-5 py-12 sm:px-8 lg:px-12 lg:py-16"
         aria-labelledby="featured-title"
       >
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#38BDF8]">Catálogo</p>
             <h2 id="featured-title" className="mt-3 text-3xl font-black tracking-tight text-[#FBFEF9] sm:text-4xl">
