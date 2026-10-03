@@ -7,6 +7,8 @@ type ProductEventProperties = {
     placement: "hero" | "final";
   };
   builder_used: Record<string, never>;
+  guided_builder_started: Record<string, never>;
+  guided_builder_completed: Record<string, never>;
   component_added: {
     category: ComponentCategory;
     source: "builder" | "catalog" | "detail";

@@ -8,16 +8,19 @@
  * - Right (sticky summary): price, wattage, compatibility status.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
+import { useGuidedBuilderStore } from "@/store/useGuidedBuilderStore";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { getBuildProgress } from "@/lib/build/progress";
-import { trackProductEventOnce } from "@/lib/analytics";
+import { trackProductEvent, trackProductEventOnce } from "@/lib/analytics";
 import type { ComponentCategory } from "@/lib/categories";
 import type { BuildSelection, StorageComponent } from "@/types/component";
 import { SlotRow } from "./SlotRow";
 import { BuildSummaryPanel } from "./BuildSummaryPanel";
 import { CatalogModal } from "./CatalogModal";
+import { GuidedBuilderSummary } from "./guided/GuidedBuilderSummary";
+import { GuidedBuilderWizard } from "./guided/GuidedBuilderWizard";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
 
 // ---------------------------------------------------------------------------
@@ -112,16 +115,35 @@ export function PCBuilderView() {
   const getCompatibilityReport = useBuildStore((s) => s.getCompatibilityReport);
   const getTotalPrice = useBuildStore((s) => s.getTotalPrice);
   const reconcileCatalog = useBuildStore((s) => s.reconcileCatalog);
+  const guideEnabled = useGuidedBuilderStore((s) => s.enabled);
+  const guideUseCase = useGuidedBuilderStore((s) => s.useCase);
+  const guideBudget = useGuidedBuilderStore((s) => s.budget);
+  const guidePriority = useGuidedBuilderStore((s) => s.priority);
+  const configureGuide = useGuidedBuilderStore((s) => s.configure);
+  const disableGuide = useGuidedBuilderStore((s) => s.disable);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<keyof BuildSelection | null>(null);
+  const [isGuideWizardOpen, setIsGuideWizardOpen] = useState(false);
+
+  const guideProfile = useMemo(
+    () => ({
+      useCase: guideUseCase,
+      budget: guideBudget,
+      priority: guidePriority,
+    }),
+    [guideBudget, guidePriority, guideUseCase],
+  );
 
   useEffect(() => {
     trackProductEventOnce("builder_used", {});
 
     let active = true;
-    void Promise.resolve(useBuildStore.persist.rehydrate())
+    void Promise.all([
+      Promise.resolve(useBuildStore.persist.rehydrate()),
+      Promise.resolve(useGuidedBuilderStore.persist.rehydrate()),
+    ])
       .catch(() => undefined)
       .then(() => fetchCatalogFromSupabase())
       .then((result) => {
@@ -137,6 +159,10 @@ export function PCBuilderView() {
     setIsModalOpen(true);
   }, []);
   const closeCatalog = useCallback(() => setIsModalOpen(false), []);
+  const openGuideWizard = useCallback(() => {
+    trackProductEvent("guided_builder_started", {});
+    setIsGuideWizardOpen(true);
+  }, []);
 
   const report = getCompatibilityReport();
   const totalPrice = getTotalPrice();
@@ -150,14 +176,36 @@ export function PCBuilderView() {
   return (
     <section id="pc-builder" className="mx-auto max-w-7xl">
       {/* Header */}
-      <div className="mb-8 pl-2">
-        <h1 className="text-3xl font-black tracking-tight text-[#FBFEF9] sm:text-4xl">
-          Arma tu PC
-        </h1>
-        <p className="mt-3 text-sm text-white/60">
-          Selecciona tus componentes y verifica la compatibilidad en tiempo real.
-        </p>
+      <div className="mb-8 flex flex-col gap-4 pl-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-[#FBFEF9] sm:text-4xl">
+            Arma tu PC
+          </h1>
+          <p className="mt-3 text-sm text-white/60">
+            Selecciona tus componentes y verifica la compatibilidad en tiempo real.
+          </p>
+        </div>
+        {!guideEnabled && (
+          <button
+            type="button"
+            onClick={openGuideWizard}
+            className="min-h-11 self-start rounded-xl border border-[#38BDF8]/40 bg-[#0E79B2]/15 px-5 text-sm font-semibold text-[#7DD3FC] transition-colors hover:border-[#38BDF8] hover:bg-[#0E79B2]/25 sm:self-auto"
+          >
+            Ayúdame a elegir
+          </button>
+        )}
       </div>
+
+      {guideEnabled && (
+        <GuidedBuilderSummary
+          profile={guideProfile}
+          build={build}
+          totalPrice={totalPrice}
+          onOpenCategory={openCatalog}
+          onEdit={openGuideWizard}
+          onDisable={disableGuide}
+        />
+      )}
 
       {/* Bento Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -321,6 +369,17 @@ export function PCBuilderView() {
         onClose={closeCatalog}
         category={activeCategory}
       />
+      {isGuideWizardOpen && (
+        <GuidedBuilderWizard
+          initialProfile={guideProfile}
+          onClose={() => setIsGuideWizardOpen(false)}
+          onComplete={(profile) => {
+            configureGuide(profile);
+            trackProductEvent("guided_builder_completed", {});
+            setIsGuideWizardOpen(false);
+          }}
+        />
+      )}
     </section>
   );
 }
