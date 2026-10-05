@@ -59,6 +59,10 @@ The production and real-Auth facts above record the validated end-of-session sta
 - Add dedicated social/OpenGraph previews.
 - Continue expanding the catalog and product experience.
 
+## Prepared / Pending Production Apply
+
+- Catalog/Data Expansion 1.0 is prepared but not applied to Supabase production. `apps/web/scripts/catalog-expansion-v1.json` contains six source-attributed, domain-validated rows: three `case` and three `cooler` SKUs, each with an in-stock `spdigital` listing and positive CLP cash price. `apps/web/scripts/validate-catalog-expansion.mjs` is dry-run only and prints the exact planned inserts; it has no Supabase client or write path. The accompanying test passes every row through `parseProductRow`, validates unique slugs and numeric prices, and proves a full compatible build plus guided ranking with the prepared entries. Apply only after a fresh price/stock recheck and explicit production-write authorization.
+
 ## Architectural Decisions to Preserve
 
 - Supabase `products` and `store_listings` are the runtime catalog source. Catalog reads go through the repository and validation layer.
