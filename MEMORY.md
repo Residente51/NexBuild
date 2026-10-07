@@ -59,6 +59,16 @@ The production and real-Auth facts above record the validated end-of-session sta
 - Add dedicated social/OpenGraph previews.
 - Continue expanding the catalog and product experience.
 
+## Catalog/Data Expansion 1.0
+
+- Applied to Supabase production.
+- Added 3 Cooler Master cases and 3 Cooler Master CPU coolers.
+- Production catalog now contains 46 products.
+- Read-back confirmed 6/6 products and 6/6 store listings.
+- A complete 8/8 build was validated as compatible in production.
+- No schema, Auth, RLS, CSP, migration, or environment changes were required.
+- The six new products currently use the visual fallback because `image_url` and `description` are `null`.
+
 ## Architectural Decisions to Preserve
 
 - Supabase `products` and `store_listings` are the runtime catalog source. Catalog reads go through the repository and validation layer.

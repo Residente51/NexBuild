@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "preparedAt": "2026-10-04",
+  "products": [
+    {
+      "slug": "cooler-master-masterbox-td500-mesh",
+      "name": "Cooler Master MasterBox TD500 Mesh",
+      "brand": "Cooler Master",
+      "category": "case",
+      "specs": {
+        "supportedMotherboards": ["ATX", "E-ATX", "Micro-ATX", "Mini-ITX"],
+        "maxGpuLength": 410,
+        "maxCoolerHeight": 165,
+        "supportedPsuFormFactors": ["atx"],
+        "radiatorSupport": ["120", "140", "240", "280", "360"]
+      },
+      "listing": {
+        "storeId": "spdigital",
+        "priceCash": 119990,
+        "inStock": true,
+        "productUrl": "https://www.spdigital.cl/gabinete-cooler-master-masterbox-td500-mesh-atx-micro-atx-mini-itx-vidrio-templado-negro/"
+      },
+      "sources": {
+        "specs": "https://www.spdigital.cl/gabinete-cooler-master-masterbox-td500-mesh-atx-micro-atx-mini-itx-vidrio-templado-negro/",
+        "listing": "https://www.spdigital.cl/gabinete-cooler-master-masterbox-td500-mesh-atx-micro-atx-mini-itx-vidrio-templado-negro/"
+      }
+    },
+    {
+      "slug": "cooler-master-masterbox-td300-mesh-black",
+      "name": "Cooler Master MasterBox TD300 Mesh Black",
+      "brand": "Cooler Master",
+      "category": "case",
+      "specs": {
+        "supportedMotherboards": ["Micro-ATX", "Mini-ITX"],
+        "maxGpuLength": 344,
+        "maxCoolerHeight": 166,
+        "supportedPsuFormFactors": ["atx"],
+        "radiatorSupport": ["120", "140", "240", "280"]
+      },
+      "listing": {
+        "storeId": "spdigital",
+        "priceCash": 109990,
+        "inStock": true,
+        "productUrl": "https://www.spdigital.cl/td300-mesh/"
+      },
+      "sources": {
+        "specs": "https://legacy.coolermaster.com/en-global/products/td300-mesh/",
+        "listing": "https://www.spdigital.cl/td300-mesh/"
+      }
+    },
+    {
+      "slug": "cooler-master-masterbox-td300-mesh-white",
+      "name": "Cooler Master MasterBox TD300 Mesh White",
+      "brand": "Cooler Master",
+      "category": "case",
+      "specs": {
+        "supportedMotherboards": ["Micro-ATX", "Mini-ITX"],
+        "maxGpuLength": 344,
+        "maxCoolerHeight": 166,
+        "supportedPsuFormFactors": ["atx"],
+        "radiatorSupport": ["120", "140", "240", "280"]
+      },
+      "listing": {
+        "storeId": "spdigital",
+        "priceCash": 119990,
+        "inStock": true,
+        "productUrl": "https://www.spdigital.cl/td300-mesh-white/"
+      },
+      "sources": {
+        "specs": "https://legacy.coolermaster.com/en-global/products/td300-mesh/",
+        "listing": "https://www.spdigital.cl/td300-mesh-white/"
+      }
+    },
+    {
+      "slug": "cooler-master-hyper-212-halo-black",
+      "name": "Cooler Master Hyper 212 Halo Black",
+      "brand": "Cooler Master",
+      "category": "cooler",
+      "specs": {
+        "type": "air",
+        "supportedSockets": ["AM4", "AM5", "LGA1700"],
+        "height": 154
+      },
+      "listing": {
+        "storeId": "spdigital",
+        "priceCash": 64990,
+        "inStock": true,
+        "productUrl": "https://www.spdigital.cl/hyper-212-halo-black/"
+      },
+      "sources": {
+        "specs": "https://www.coolermaster.com/en-us/products/hyper-212-halo-black.html",
+        "listing": "https://www.spdigital.cl/hyper-212-halo-black/"
+      }
+    },
+    {
+      "slug": "cooler-master-hyper-212-3dhp-black-argb",
+      "name": "Cooler Master Hyper 212 3DHP Black ARGB",
+      "brand": "Cooler Master",
+      "category": "cooler",
+      "specs": {
+        "type": "air",
+        "supportedSockets": ["AM4", "AM5", "LGA1700"],
+        "height": 158
+      },
+      "listing": {
+        "storeId": "spdigital",
+        "priceCash": 69990,
+        "inStock": true,
+        "productUrl": "https://www.spdigital.cl/disipador-de-cpu-hyper-212-3dhp-black-argb-120mm-intelamd/"
+      },
+      "sources": {
+        "specs": "https://www.spdigital.cl/disipador-de-cpu-hyper-212-3dhp-black-argb-120mm-intelamd/",
+        "listing": "https://www.spdigital.cl/disipador-de-cpu-hyper-212-3dhp-black-argb-120mm-intelamd/"
+      }
+    },
+    {
+      "slug": "cooler-master-hyper-212-spectrum-v3",
+      "name": "Cooler Master Hyper 212 Spectrum V3",
+      "brand": "Cooler Master",
+      "category": "cooler",
+      "specs": {
+        "type": "air",
+        "supportedSockets": ["AM4", "AM5", "LGA1700"],
+        "height": 152
+      },
+      "listing": {
+        "storeId": "spdigital",
+        "priceCash": 19990,
+        "inStock": true,
+        "productUrl": "https://www.spdigital.cl/hyper-420s/"
+      },
+      "sources": {
+        "specs": "https://www.spdigital.cl/hyper-420s/",
+        "listing": "https://www.spdigital.cl/hyper-420s/"
+      }
+    }
+  ]
+}
