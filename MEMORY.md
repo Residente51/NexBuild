@@ -59,9 +59,15 @@ The production and real-Auth facts above record the validated end-of-session sta
 - Add dedicated social/OpenGraph previews.
 - Continue expanding the catalog and product experience.
 
-## Prepared / Pending Production Apply
+## Catalog/Data Expansion 1.0
 
-- Catalog/Data Expansion 1.0 is prepared but not applied to Supabase production. `apps/web/scripts/catalog-expansion-v1.json` contains six source-attributed, domain-validated rows: three `case` and three `cooler` SKUs, each with an in-stock `spdigital` listing and positive CLP cash price. `apps/web/scripts/validate-catalog-expansion.mjs` is dry-run only and prints the exact planned inserts; it has no Supabase client or write path. The accompanying test passes every row through `parseProductRow`, validates unique slugs and numeric prices, and proves a full compatible build plus guided ranking with the prepared entries. Apply only after a fresh price/stock recheck and explicit production-write authorization.
+- Applied to Supabase production.
+- Added 3 Cooler Master cases and 3 Cooler Master CPU coolers.
+- Production catalog now contains 46 products.
+- Read-back confirmed 6/6 products and 6/6 store listings.
+- A complete 8/8 build was validated as compatible in production.
+- No schema, Auth, RLS, CSP, migration, or environment changes were required.
+- The six new products currently use the visual fallback because `image_url` and `description` are `null`.
 
 ## Architectural Decisions to Preserve
 
