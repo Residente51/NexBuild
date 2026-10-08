@@ -1,6 +1,6 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-10-03
+Updated: 2026-10-08
 
 ## Current Snapshot
 
@@ -31,6 +31,7 @@ Updated: 2026-10-03
 - Performance & Mobile Audit 1.0 is complete on `perf/public-audit`: the Home featured-catalog header now stays stacked through tablet widths to prevent a clipped CTA, and the first visible catalog image receives high fetch priority while later images remain lazy.
 - Builder guiado v1 is complete on `feat/guided-builder-v1`: `/builder` now offers an optional three-question guide with a separate persisted profile store, deterministic budget/category strategy, compatibility-aware candidate ranking, and a persistent summary above the unchanged manual Builder. It uses no AI, generates no complete build, and makes no benchmark or FPS claims.
 - Budget & Recommendations 1.1 is complete on `feat/budget-recommendations-v1`: the guided summary now shows deterministic category budget targets, spend, deviations, progress, and compatibility; the catalog highlights up to three guided candidates with explanations derived only from available price, compatibility, stock, and specification data. It uses no AI or benchmarks and keeps manual catalog choice available.
+- Product Imagery & Catalog Quality 1.0 is complete on `feat/catalog-quality-v1`: all 46 production products now have a validated image and description; the six Cooler Master additions received official imagery plus factual Spanish descriptions, and the five stale ASUS paths were replaced with official ASUS imagery.
 - `nexbuild.games` was validated working over HTTPS.
 - Production `NEXT_PUBLIC_SITE_URL` was set to `https://nexbuild.games`.
 - Supabase Site URL was set to `https://nexbuild.games`.
@@ -67,7 +68,17 @@ The production and real-Auth facts above record the validated end-of-session sta
 - Read-back confirmed 6/6 products and 6/6 store listings.
 - A complete 8/8 build was validated as compatible in production.
 - No schema, Auth, RLS, CSP, migration, or environment changes were required.
-- The six new products currently use the visual fallback because `image_url` and `description` are `null`.
+- The six new products initially used the visual fallback because `image_url` and `description` were `null`; Product Imagery & Catalog Quality 1.0 resolved that debt.
+
+## Product Imagery & Catalog Quality 1.0
+
+- Applied 11 controlled production updates through `apps/web/scripts/catalog-quality-v1.json` and `validate-catalog-quality.mjs`: six Cooler Master rows received `image_url` and `description`, and five ASUS rows received `image_url` only.
+- Cooler Master targets: MasterBox TD500 Mesh, TD300 Mesh Black, TD300 Mesh White, Hyper 212 Halo Black, Hyper 212 3DHP Black ARGB, and Hyper 212 Spectrum V3.
+- ASUS targets: PRIME H610M-E D4, ROG STRIX X670E-F GAMING WIFI, ROG Thor 1000W Platinum II, TUF Gaming GeForce RTX 4080 SUPER, and TUF GAMING X570-PLUS.
+- Production read-back confirmed 46/46 active products with `image_url` and non-empty `description`: 35 existing local assets and 11 verified HTTPS manufacturer assets. No known stale path remains filtered by `validation.ts`, and no image fallback is currently active in production data.
+- The five RAM slugs containing parentheses remain unchanged to preserve existing URLs: Corsair Vengeance DDR5, Corsair Vengeance LPX DDR4, G.Skill Trident Z5 RGB, Kingston FURY Beast DDR4, and TeamGroup T-Force Delta RGB. A future migration should add aliases/redirects before changing canonical slugs.
+- No schema, Auth, RLS, CSP, migration, environment, price, stock, Builder, or Compare change was required. `ComponentImage`, `validation.ts`, and `next.config.ts` remain unchanged.
+- Validation passed with 22 test files and 133 tests, production build, `git diff --check`, production read-back, and browser QA on desktop 1440x900 and mobile 390x844 across Home, catalog, representative case/cooler/ASUS details, and both Builder catalog modals. All 11 target images loaded, no HTTP 4xx/5xx or app console errors appeared, and fallback behavior remains covered by the unchanged validation/runtime path.
 
 ## Architectural Decisions to Preserve
 

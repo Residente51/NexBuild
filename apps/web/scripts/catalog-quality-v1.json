@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "preparedAt": "2026-10-08",
+  "updates": [
+    {
+      "id": "0de43f96-49ae-42f3-8884-221032a1b089",
+      "slug": "cooler-master-masterbox-td500-mesh",
+      "expectedName": "Cooler Master MasterBox TD500 Mesh",
+      "expectedCurrent": {
+        "image_url": null,
+        "description": null
+      },
+      "update": {
+        "image_url": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dwfcd0516b/Assets/masterbox-td500-mesh/large/td500-mesh-black-gallery-1.png",
+        "description": "Gabinete ATX de torre media con frontal de malla poligonal, panel lateral de vidrio templado y tres ventiladores ARGB preinstalados. Admite tarjetas gráficas de hasta 410 mm y radiadores de hasta 360 mm."
+      },
+      "sources": {
+        "productPage": "https://www.coolermaster.com/en-sg/products/masterbox-td500-mesh.html",
+        "imageAsset": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dwfcd0516b/Assets/masterbox-td500-mesh/large/td500-mesh-black-gallery-1.png"
+      }
+    },
+    {
+      "id": "12d8dfbd-e34e-4553-8392-ca12ed2eba2d",
+      "slug": "cooler-master-masterbox-td300-mesh-black",
+      "expectedName": "Cooler Master MasterBox TD300 Mesh Black",
+      "expectedCurrent": {
+        "image_url": null,
+        "description": null
+      },
+      "update": {
+        "image_url": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw7112b91a/Assets/td300-mesh/large/td300-mesh-gallery-1.png",
+        "description": "Gabinete compacto Micro-ATX en color negro, con frontal de malla poligonal, panel lateral de vidrio templado y dos ventiladores ARGB preinstalados. Admite tarjetas gráficas de hasta 344 mm y radiadores de hasta 280 mm."
+      },
+      "sources": {
+        "productPage": "https://www.coolermaster.com/en-sg/products/td300-mesh.html",
+        "imageAsset": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw7112b91a/Assets/td300-mesh/large/td300-mesh-gallery-1.png"
+      }
+    },
+    {
+      "id": "b67c98a7-a193-4968-9e7e-8e90e4bdccad",
+      "slug": "cooler-master-masterbox-td300-mesh-white",
+      "expectedName": "Cooler Master MasterBox TD300 Mesh White",
+      "expectedCurrent": {
+        "image_url": null,
+        "description": null
+      },
+      "update": {
+        "image_url": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw3a75c3b8/Assets/td300-mesh/large/td300-mesh-gallery-3.png",
+        "description": "Gabinete compacto Micro-ATX en color blanco, con frontal de malla poligonal, panel lateral de vidrio templado y dos ventiladores ARGB preinstalados. Admite tarjetas gráficas de hasta 344 mm y radiadores de hasta 280 mm."
+      },
+      "sources": {
+        "productPage": "https://www.coolermaster.com/en-sg/products/td300-mesh.html",
+        "imageAsset": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw3a75c3b8/Assets/td300-mesh/large/td300-mesh-gallery-3.png"
+      }
+    },
+    {
+      "id": "fbc1f029-0756-498a-8a3a-1e0252fabd74",
+      "slug": "cooler-master-hyper-212-halo-black",
+      "expectedName": "Cooler Master Hyper 212 Halo Black",
+      "expectedCurrent": {
+        "image_url": null,
+        "description": null
+      },
+      "update": {
+        "image_url": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw5127265d/Assets/hyper-212-halo-black/large/hyper-212-halo-black-01-gallery-01.png",
+        "description": "Disipador por aire de 154 mm con cuatro heat pipes, cubierta superior de aluminio negra y ventilador ARGB de 120 mm. Compatible con sockets AM4, AM5 y LGA1700."
+      },
+      "sources": {
+        "productPage": "https://www.coolermaster.com/en-global/products/hyper-212-halo-black.html",
+        "imageAsset": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw5127265d/Assets/hyper-212-halo-black/large/hyper-212-halo-black-01-gallery-01.png"
+      }
+    },
+    {
+      "id": "14419880-28f5-488d-9f0e-1dda73e25c3a",
+      "slug": "cooler-master-hyper-212-3dhp-black-argb",
+      "expectedName": "Cooler Master Hyper 212 3DHP Black ARGB",
+      "expectedCurrent": {
+        "image_url": null,
+        "description": null
+      },
+      "update": {
+        "image_url": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dwed278f9e/Assets/hyper-212-3dhp-black-argb/large/01-gallary-01.png",
+        "description": "Disipador por aire negro de 158 mm con tecnología 3DHP, base de cobre y ventilador ARGB de 120 mm. Compatible con sockets AM4, AM5 y LGA1700."
+      },
+      "sources": {
+        "productPage": "https://www.coolermaster.com/en-global/products/hyper-212-3dhp-black-argb.html",
+        "imageAsset": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dwed278f9e/Assets/hyper-212-3dhp-black-argb/large/01-gallary-01.png"
+      }
+    },
+    {
+      "id": "65806014-164a-47c4-8fc0-f98275ae28a0",
+      "slug": "cooler-master-hyper-212-spectrum-v3",
+      "expectedName": "Cooler Master Hyper 212 Spectrum V3",
+      "expectedCurrent": {
+        "image_url": null,
+        "description": null
+      },
+      "update": {
+        "image_url": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw8e4028e9/Assets/hyper-212-spectrum-v3/large/hyper-212-spectrum-v301-gallery-01-png.png",
+        "description": "Disipador por aire de 152 mm con cuatro heat pipes de contacto directo y ventilador ARGB de 120 mm. Compatible con sockets AM4, AM5 y LGA1700."
+      },
+      "sources": {
+        "productPage": "https://www.coolermaster.com/en-global/products/hyper-212-spectrum-v3.html",
+        "imageAsset": "https://www.coolermaster.com/on/demandware.static/-/Sites-cooler-master-main/default/dw8e4028e9/Assets/hyper-212-spectrum-v3/large/hyper-212-spectrum-v301-gallery-01-png.png"
+      }
+    },
+    {
+      "id": "667702c0-1a54-4122-ba99-dec61b704a57",
+      "slug": "asus-prime-h610m-e-d4",
+      "expectedName": "ASUS PRIME H610M-E D4",
+      "expectedCurrent": {
+        "image_url": "/images/components/asus-prime-h610m-e-d4.png"
+      },
+      "update": {
+        "image_url": "https://dlcdnwebimgs.asus.com/gain/9457bb86-f547-4ee6-8648-cba3963376b6/"
+      },
+      "sources": {
+        "productPage": "https://www.asus.com/us/motherboards-components/motherboards/prime/prime-h610m-e-d4/",
+        "imageAsset": "https://dlcdnwebimgs.asus.com/gain/9457bb86-f547-4ee6-8648-cba3963376b6/"
+      }
+    },
+    {
+      "id": "973932ec-5cc7-49fd-88d6-4aaf5bce4cad",
+      "slug": "asus-rog-strix-x670e-f-gaming-wifi",
+      "expectedName": "ASUS ROG STRIX X670E-F GAMING WIFI",
+      "expectedCurrent": {
+        "image_url": "/images/components/asus-rog-strix-x670e-f-gaming-wifi.png"
+      },
+      "update": {
+        "image_url": "https://dlcdnwebimgs.asus.com/gain/FD1C240A-52A1-42B8-855C-43E155E98B4B"
+      },
+      "sources": {
+        "productPage": "https://rog.asus.com/motherboards/rog-strix/rog-strix-x670e-f-gaming-wifi-model/",
+        "imageAsset": "https://dlcdnwebimgs.asus.com/gain/FD1C240A-52A1-42B8-855C-43E155E98B4B"
+      }
+    },
+    {
+      "id": "345acb5d-8cc0-4a28-8cb0-df19a3d7a676",
+      "slug": "asus-rog-thor-1000w-platinum-ii",
+      "expectedName": "ASUS ROG Thor 1000W Platinum II",
+      "expectedCurrent": {
+        "image_url": "/images/components/asus-rog-thor-1000w-platinum-ii.png"
+      },
+      "update": {
+        "image_url": "https://dlcdnwebimgs.asus.com/gain/F40C3AEA-D458-41E6-BF27-045C0C8D5086"
+      },
+      "sources": {
+        "productPage": "https://rog.asus.com/power-supply-units/rog-thor/rog-thor-1000p2-gaming-model/",
+        "imageAsset": "https://dlcdnwebimgs.asus.com/gain/F40C3AEA-D458-41E6-BF27-045C0C8D5086"
+      }
+    },
+    {
+      "id": "6ecf8a68-625a-4e6a-b2e7-8504c420742c",
+      "slug": "asus-tuf-gaming-geforce-rtx-4080-super",
+      "expectedName": "ASUS TUF Gaming GeForce RTX 4080 SUPER",
+      "expectedCurrent": {
+        "image_url": "/images/components/asus-tuf-gaming-geforce-rtx-4080-super.png"
+      },
+      "update": {
+        "image_url": "https://dlcdnwebimgs.asus.com/gain/774db1be-670b-432d-842a-9c9b6d415c92/"
+      },
+      "sources": {
+        "productPage": "https://www.asus.com/motherboards-components/graphics-cards/tuf-gaming/tuf-rtx4080s-16g-gaming/",
+        "imageAsset": "https://dlcdnwebimgs.asus.com/gain/774db1be-670b-432d-842a-9c9b6d415c92/"
+      }
+    },
+    {
+      "id": "b1494b01-cfae-4fb7-aaf7-b31287a0ef6b",
+      "slug": "asus-tuf-gaming-x570-plus",
+      "expectedName": "ASUS TUF GAMING X570-PLUS",
+      "expectedCurrent": {
+        "image_url": "/images/components/asus-tuf-gaming-x570-plus.png"
+      },
+      "update": {
+        "image_url": "https://www.asus.com/media/global/gallery/vd7pofnyusetrpeq_setting_xxx_0_90_end_2000.png"
+      },
+      "sources": {
+        "productPage": "https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-x570-plus/",
+        "imageAsset": "https://www.asus.com/media/global/gallery/vd7pofnyusetrpeq_setting_xxx_0_90_end_2000.png"
+      }
+    }
+  ]
+}
