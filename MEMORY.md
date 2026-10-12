@@ -1,12 +1,13 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-10-08
+Updated: 2026-10-11
 
 ## Current Snapshot
 
-- Stable branch: `main`; consolidated E2E coverage was squash-merged through PR #6 as `d7cb844`.
+- Stable branch: `main`; shared GitHub workflow documentation was squash-merged through PR #17 as `9e796ef`.
 - Main app: `apps/web`.
 - README and architecture artifacts reflect the current catalog, Builder, Auth, ownership, saved-build, and sharing architecture.
+- `AGENTS.md`, `docs/PROJECT_INSTRUCTIONS.md`, and `docs/STATUS.md` define GitHub as the source of truth and the handoff flow across ChatGPT, Codex, VS Code, and Work.
 - The architecture visual check currently reports `pass`.
 
 ## Completed

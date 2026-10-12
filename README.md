@@ -82,6 +82,7 @@ GitHub es la fuente de verdad del proyecto. Todo trabajo debe partir desde `orig
 - [`docs/PROJECT_INSTRUCTIONS.md`](./docs/PROJECT_INSTRUCTIONS.md): instrucciones copiables para el proyecto de ChatGPT y flujo entre herramientas.
 - [`docs/STATUS.md`](./docs/STATUS.md): estado actual, verificación conocida y próximos pasos.
 - [`MEMORY.md`](./MEMORY.md): handoff técnico detallado entre sesiones.
+- [`.agents/skills/nexbuild-continuity/SKILL.md`](./.agents/skills/nexbuild-continuity/SKILL.md): flujo reutilizable para retomar y transferir trabajo entre agentes.
 
 ## Base de datos y catálogo
 
