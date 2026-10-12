@@ -71,6 +71,18 @@ Treat main as stable.
 
 For localized tasks, inspect only directly related files and search for existing implementations before creating new ones. Do not re-analyze established architecture unless the task requires it.
 
+## Source of Truth and Shared Workflow
+
+- GitHub repository `Residente51/NexBuild` is the source of truth for code and project documentation.
+- Start by reading `README.md`, this file, `MEMORY.md`, and `docs/STATUS.md` when it exists.
+- Before editing, fetch the latest remote state and branch from `origin/main`. Do not work directly on `main`.
+- Use one focused branch per task, keep commits scoped, and open a pull request back to `main` for review.
+- ChatGPT, Codex, VS Code, and other agents must continue from the same remote branch rather than recreating changes in a separate copy.
+- Pull before resuming work in another tool, and push completed commits before handing the task to another tool.
+- Treat chat history as context only. Repository files and the current Git graph are authoritative when they disagree with a conversation.
+- Never commit `.env` files, credentials, tokens, magic links, private URLs, or copied production data.
+- Copy-ready ChatGPT Project instructions and the cross-tool operating flow live in `docs/PROJECT_INSTRUCTIONS.md`.
+
 ## Git Rules
 
 - Treat `main` as stable and inspect the working tree before editing.
