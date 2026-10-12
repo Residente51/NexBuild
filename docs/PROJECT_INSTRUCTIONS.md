@@ -16,11 +16,12 @@ The current stack is Next.js 16 App Router, React 19, strict TypeScript, Tailwin
 4. Reuse existing routes, components, stores, repositories, validation, compatibility logic, and tests before adding abstractions.
 5. Keep changes narrow. Do not redesign, refactor unrelated code, add dependencies, or change Supabase, Auth, RLS, migrations, production configuration, or environment files unless explicitly requested.
 6. Never expose or commit secrets, tokens, cookies, magic links, service-role values, private environment variables, or sensitive production data.
-7. Treat `main` as stable. Create a focused branch from the latest `origin/main`, commit only task files, push the branch, and open a pull request for review. Never write directly to `main`.
-8. When continuing work started in Codex or VS Code, use the existing remote branch and inspect its diff before changing anything. Do not recreate the work in another branch unless requested.
-9. Run focused checks during implementation. From `apps/web`, use `pnpm run typecheck` and relevant tests; at milestone close, run `pnpm run check`, `pnpm build`, and `git diff --check` when the scope warrants them.
-10. Report the branch, pull request, files changed, checks run, failures or caveats, and any user action still required. Do not claim a check passed unless it actually ran.
-11. Update `docs/STATUS.md` only when the repository's current state or verified next steps change. Update `MEMORY.md` only for durable technical handoff information.
+7. The ChatGPT GitHub app is read-only. Use ChatGPT to inspect, plan, and review; send implementation work to Codex or VS Code.
+8. Treat `main` as stable. Implementation must use a focused branch from the latest `origin/main`, commit only task files, push the branch, and open a pull request for review. Never write directly to `main`.
+9. When reviewing or continuing work started in Codex or VS Code, use the existing remote branch and inspect its diff. Do not recreate the work in another branch unless requested.
+10. Run focused checks during implementation. From `apps/web`, use `pnpm run typecheck` and relevant tests; at milestone close, run `pnpm run check`, `pnpm build`, and `git diff --check` when the scope warrants them.
+11. Report the branch, pull request, files changed, checks run, failures or caveats, and any user action still required. Do not claim a check passed unless it actually ran.
+12. Update `docs/STATUS.md` only when the repository's current state or verified next steps change. Update `MEMORY.md` only for durable technical handoff information.
 
 ## Cross-tool operating flow
 
@@ -30,7 +31,7 @@ The current stack is Next.js 16 App Router, React 19, strict TypeScript, Tailwin
 - Create a ChatGPT Project named `NexBuild`.
 - Add this document to the Project instructions, or paste the section above.
 - Ask ChatGPT to inspect the repository before proposing or applying changes.
-- For implementation work, require a branch and pull request instead of changes to `main`.
+- Use ChatGPT for repository-aware planning and review. For implementation, hand the task to Codex or VS Code and require a branch and pull request instead of changes to `main`.
 
 ### Continue in Codex or VS Code
 
@@ -63,4 +64,6 @@ Delete task branches only after the work is safely merged and no tool still depe
 
 ## Permission requirements
 
-The GitHub connection used by ChatGPT must have access to the `Residente51` account and the `NexBuild` repository. Reading requires repository contents and metadata access. Creating branches, commits, and pull requests requires repository contents write access and pull request write access. For a private repository, select either **All repositories** or explicitly include **NexBuild** when configuring the GitHub app.
+The GitHub connection used by ChatGPT must have access to the `Residente51` account and the `NexBuild` repository. It provides read-only repository access for analysis and review. For a private repository, select either **All repositories** or explicitly include **NexBuild** when configuring the GitHub app.
+
+Codex or the local Git client must authenticate separately for implementation. Publishing a branch requires repository contents write access; creating the review request requires pull request write access or a signed-in GitHub browser session.
