@@ -9,8 +9,9 @@ This is the concise current-state record for humans and agents. Git history, ope
 - Source of truth: `https://github.com/Residente51/NexBuild`
 - Stable branch: `main`
 - Main application: `apps/web`
-- Latest inspected `main`: `5cd463d` (`feat(catalog): improve imagery and copy (#16)`)
+- Latest inspected `main`: `9e796ef` (`docs(workflow): use GitHub as project source of truth (#17)`)
 - Delivery rule: focused branch and pull request; no direct work on `main`
+- Shared workflow documentation was merged through PR #17; the repository-local continuity skill is proposed on the current branch and is not part of `main` until merged.
 
 ## Current product state
 
@@ -40,7 +41,8 @@ This is the concise current-state record for humans and agents. Git history, ope
 1. Use `main` only as the stable integration branch.
 2. Create or reuse one task branch per change and open a pull request.
 3. Review or close stale PRs #2 and #5 separately; do not mix that cleanup into unrelated feature work.
-4. Keep this file concise and update it only when verified project state changes.
+4. Use the `nexbuild-continuity` skill for cross-tool resume and handoff work when supported.
+5. Keep this file concise and update it only when verified project state changes.
 
 ## Security boundaries
 

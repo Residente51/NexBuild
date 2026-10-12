@@ -16,12 +16,14 @@ The current stack is Next.js 16 App Router, React 19, strict TypeScript, Tailwin
 4. Reuse existing routes, components, stores, repositories, validation, compatibility logic, and tests before adding abstractions.
 5. Keep changes narrow. Do not redesign, refactor unrelated code, add dependencies, or change Supabase, Auth, RLS, migrations, production configuration, or environment files unless explicitly requested.
 6. Never expose or commit secrets, tokens, cookies, magic links, service-role values, private environment variables, or sensitive production data.
-7. The ChatGPT GitHub app is read-only. Use ChatGPT to inspect, plan, and review; send implementation work to Codex or VS Code.
+7. GitHub connection capabilities vary by environment. Verify current permissions before relying on remote writes. If branch or pull-request creation is denied, use Codex, VS Code, the local Git client, or an authenticated GitHub browser session.
 8. Treat `main` as stable. Implementation must use a focused branch from the latest `origin/main`, commit only task files, push the branch, and open a pull request for review. Never write directly to `main`.
 9. When reviewing or continuing work started in Codex or VS Code, use the existing remote branch and inspect its diff. Do not recreate the work in another branch unless requested.
 10. Run focused checks during implementation. From `apps/web`, use `pnpm run typecheck` and relevant tests; at milestone close, run `pnpm run check`, `pnpm build`, and `git diff --check` when the scope warrants them.
 11. Report the branch, pull request, files changed, checks run, failures or caveats, and any user action still required. Do not claim a check passed unless it actually ran.
 12. Update `docs/STATUS.md` only when the repository's current state or verified next steps change. Update `MEMORY.md` only for durable technical handoff information.
+
+When the current agent supports repository-local skills, use `nexbuild-continuity` for cross-tool resume, review, and handoff tasks.
 
 ## Cross-tool operating flow
 
@@ -46,6 +48,19 @@ git pull --ff-only origin <task-branch>
 
 Inspect `git status`, the pull request, and the branch diff before resuming. Keep work on the same branch, commit the scoped changes, and push that branch.
 
+### Handoff record
+
+Before changing tools, record:
+
+- repository and task branch
+- pull request URL and target branch
+- latest pushed commit
+- files changed and scope boundaries
+- checks actually run and their results
+- failures, deferred work, and the next concrete action
+
+Never include secrets, environment values, session data, or private production information in the handoff.
+
 ### Return to ChatGPT
 
 Ask ChatGPT to review the pull request or continue on the same branch. The pull request discussion and repository files are the handoff; do not paste secrets or private environment values into the chat.
@@ -64,6 +79,6 @@ Delete task branches only after the work is safely merged and no tool still depe
 
 ## Permission requirements
 
-The GitHub connection used by ChatGPT must have access to the `Residente51` account and the `NexBuild` repository. It provides read-only repository access for analysis and review. For a private repository, select either **All repositories** or explicitly include **NexBuild** when configuring the GitHub app.
+The GitHub connection used by ChatGPT must have access to the `Residente51` account and the `NexBuild` repository. Treat it as read-only until the required write operation succeeds. For a private repository, select either **All repositories** or explicitly include **NexBuild** when configuring the GitHub app.
 
 Codex or the local Git client must authenticate separately for implementation. Publishing a branch requires repository contents write access; creating the review request requires pull request write access or a signed-in GitHub browser session.
