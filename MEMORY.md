@@ -4,10 +4,11 @@ Updated: 2026-10-11
 
 ## Current Snapshot
 
-- Stable branch: `main`; shared GitHub workflow documentation was squash-merged through PR #17 as `9e796ef`.
+- Stable branch: `main`; shared GitHub workflow documentation was merged through PR #17, followed by the repository-local continuity skill through PR #18 as `30aa02e`.
 - Main app: `apps/web`.
 - README and architecture artifacts reflect the current catalog, Builder, Auth, ownership, saved-build, and sharing architecture.
 - `AGENTS.md`, `docs/PROJECT_INSTRUCTIONS.md`, and `docs/STATUS.md` define GitHub as the source of truth and the handoff flow across ChatGPT, Codex, VS Code, and Work.
+- `.agents/skills/nexbuild-continuity/SKILL.md` provides the reusable resume, review, and handoff workflow for agents that support repository-local skills.
 - The architecture visual check currently reports `pass`.
 
 ## Completed

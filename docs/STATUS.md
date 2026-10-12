@@ -9,9 +9,9 @@ This is the concise current-state record for humans and agents. Git history, ope
 - Source of truth: `https://github.com/Residente51/NexBuild`
 - Stable branch: `main`
 - Main application: `apps/web`
-- Latest inspected `main`: `9e796ef` (`docs(workflow): use GitHub as project source of truth (#17)`)
+- Latest inspected `main`: `30aa02e` (`docs(workflow): add continuity skill (#18)`)
 - Delivery rule: focused branch and pull request; no direct work on `main`
-- Shared workflow documentation was merged through PR #17; the repository-local continuity skill is proposed on the current branch and is not part of `main` until merged.
+- Shared workflow documentation was merged through PR #17, and the repository-local `nexbuild-continuity` skill was merged through PR #18.
 
 ## Current product state
 
