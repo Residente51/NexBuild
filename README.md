@@ -74,6 +74,15 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 `NEXT_PUBLIC_SITE_URL` define el origen usado por el callback del magic link. `SUPABASE_SERVICE_ROLE_KEY` es exclusivamente de servidor y nunca debe llevar el prefijo `NEXT_PUBLIC_` ni importarse desde código cliente.
 
+## Colaboración con ChatGPT, Codex y VS Code
+
+GitHub es la fuente de verdad del proyecto. Todo trabajo debe partir desde `origin/main`, realizarse en una rama acotada y volver mediante un pull request; no se trabaja directamente sobre `main`.
+
+- [`AGENTS.md`](./AGENTS.md): reglas técnicas y de seguridad para agentes.
+- [`docs/PROJECT_INSTRUCTIONS.md`](./docs/PROJECT_INSTRUCTIONS.md): instrucciones copiables para el proyecto de ChatGPT y flujo entre herramientas.
+- [`docs/STATUS.md`](./docs/STATUS.md): estado actual, verificación conocida y próximos pasos.
+- [`MEMORY.md`](./MEMORY.md): handoff técnico detallado entre sesiones.
+
 ## Base de datos y catálogo
 
 Para una instalación nueva, aplica los archivos SQL en orden:
