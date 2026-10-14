@@ -6,6 +6,7 @@ import { ComponentImage } from "@/components/catalog/ComponentImage";
 import { buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS, type ComponentCategory } from "@/lib/categories";
 import { getCatalogSpecBadges } from "@/lib/components/catalog";
+import { getComponentPriceLabel } from "@/lib/components/pricing";
 import type { PCComponent } from "@/types/component";
 
 interface CatalogItemCardProps {
@@ -126,9 +127,7 @@ export function CatalogItemCard({
 
       <div className="mt-6 border-t border-white/5 pt-4">
         <p className="text-lg font-bold tabular-nums text-[#FBFEF9]">
-          {component.price > 0
-            ? `$${component.price.toLocaleString("es-CL")}`
-            : "Sin precio"}
+          {getComponentPriceLabel(component)}
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2">

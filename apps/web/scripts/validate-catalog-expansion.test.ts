@@ -54,7 +54,13 @@ describe("Catalog/Data Expansion 1.0 payload", () => {
     specs: product.specs,
     image_url: null,
     description: null,
-    store_listings: [{ price_cash: product.listing.priceCash, in_stock: product.listing.inStock, product_url: product.listing.productUrl }],
+    store_listings: [{
+      store_id: "spdigital",
+      price_cash: product.listing.priceCash,
+      in_stock: product.listing.inStock,
+      product_url: product.listing.productUrl,
+      stores: { id: "spdigital", name: "SP Digital", website_url: "https://www.spdigital.cl" },
+    }],
   }));
 
   it("has three valid, uniquely-slugged options for each blocked category", () => {

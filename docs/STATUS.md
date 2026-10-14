@@ -1,6 +1,6 @@
 # NexBuild Status
 
-Updated: 2026-10-11
+Updated: 2026-10-14
 
 This is the concise current-state record for humans and agents. Git history, open pull requests, and live infrastructure remain authoritative for details that can change.
 
@@ -9,7 +9,7 @@ This is the concise current-state record for humans and agents. Git history, ope
 - Source of truth: `https://github.com/Residente51/NexBuild`
 - Stable branch: `main`
 - Main application: `apps/web`
-- Latest inspected `main`: `30aa02e` (`docs(workflow): add continuity skill (#18)`)
+- Latest inspected `main`: `625a84a` (`docs(workflow): finalize continuity status (#19)`)
 - Delivery rule: focused branch and pull request; no direct work on `main`
 - Shared workflow documentation was merged through PR #17, and the repository-local `nexbuild-continuity` skill was merged through PR #18.
 
@@ -20,6 +20,7 @@ This is the concise current-state record for humans and agents. Git history, ope
 - Builder compatibility and power evaluation remain pure and deterministic.
 - The optional guided Builder and budget recommendations are implemented without AI-generated builds or benchmark claims.
 - The production catalog contains 46 products according to the current repository handoff, with catalog imagery and descriptions completed through PR #16.
+- Stores & Price Comparison 1.0 is implemented on `feat/store-price-comparison-v1`: catalog, detail, Builder, and Compare now use current in-stock offers with cash-price priority and normal-price fallback. Production contains 54 listings across 46 active products; 7 products have multiple verified offers and 39 retain one offer.
 - Public Web Analytics is privacy-scoped to production and excludes Auth and private build routes.
 
 ## Verification baseline

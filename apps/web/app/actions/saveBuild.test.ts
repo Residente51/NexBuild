@@ -24,7 +24,16 @@ const cpuRow = {
     includesCooler: true,
   },
   is_active: true,
-  store_listings: [{ price_cash: 100_000, in_stock: true }],
+  store_listings: [{
+    store_id: "test-store",
+    price_cash: 100_000,
+    in_stock: true,
+    stores: {
+      id: "test-store",
+      name: "Tienda Test",
+      website_url: "https://example.com",
+    },
+  }],
 };
 
 function installClient(products: unknown[], userId: string | null = null) {
@@ -130,7 +139,16 @@ describe("saveBuild", () => {
     const { insert } = installClient([
       {
         ...cpuRow,
-        store_listings: [{ price_cash: 100_000, in_stock: false }],
+        store_listings: [{
+          store_id: "test-store",
+          price_cash: 100_000,
+          in_stock: false,
+          stores: {
+            id: "test-store",
+            name: "Tienda Test",
+            website_url: "https://example.com",
+          },
+        }],
       },
     ]);
 

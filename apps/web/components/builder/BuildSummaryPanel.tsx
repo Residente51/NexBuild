@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { trackProductEvent } from "@/lib/analytics";
+import { calculateMinimumBuildTotal } from "@/lib/components/pricing";
 import type { ComponentCategory } from "@/lib/categories";
 import type { BuildProgress } from "@/lib/build/progress";
 import { useBuildStore } from "@/store/useBuildStore";
@@ -93,6 +94,7 @@ const EXPORT_SLOT_ORDER: Exclude<keyof BuildSelection, "storage">[] = [
 function generateBuildText(
   build: BuildSelection,
   totalPrice: number,
+  missingPriceCount: number,
   status: CompatibilityStatus,
 ): string {
   const lines: string[] = ["🖥️ NexBuild - Mi Configuración", ""];
@@ -114,7 +116,10 @@ function generateBuildText(
   }
 
   lines.push("");
-  lines.push(`💰 Total estimado: $${totalPrice.toLocaleString("es-CL")} CLP`);
+  lines.push(`💰 Total mínimo estimado: $${totalPrice.toLocaleString("es-CL")} CLP`);
+  if (missingPriceCount > 0) {
+    lines.push(`⚠️ Faltan precios disponibles para ${missingPriceCount} componente(s).`);
+  }
   lines.push(`⚙️ Estado: ${STATUS_LABELS[status]}`);
 
   return lines.join("\n");
@@ -131,7 +136,6 @@ interface BuildSummaryPanelProps {
 
 export function BuildSummaryPanel({
   build,
-  totalPrice,
   report,
   progress,
   onClearBuild,
@@ -144,6 +148,7 @@ export function BuildSummaryPanel({
   const [savedBuildSignature, setSavedBuildSignature] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const saveBuildToCloud = useBuildStore((state) => state.saveBuildToCloud);
+  const minimumTotal = calculateMinimumBuildTotal(build);
 
   const statusCfg = STATUS_CONFIG[report.status];
   const buildSignature = [
@@ -178,7 +183,12 @@ export function BuildSummaryPanel({
     try {
       setActionError(null);
       await navigator.clipboard.writeText(
-        generateBuildText(build, totalPrice, report.status),
+        generateBuildText(
+          build,
+          minimumTotal.total,
+          minimumTotal.missingPriceComponents.length,
+          report.status,
+        ),
       );
       trackProductEvent("build_shared", { method: "configuration_copy" });
       setCopied(true);
@@ -186,7 +196,7 @@ export function BuildSummaryPanel({
     } catch {
       setActionError("No pudimos copiar la configuración al portapapeles.");
     }
-  }, [build, totalPrice, report.status]);
+  }, [build, minimumTotal, report.status]);
 
   const handleSaveToCloud = async () => {
     try {
@@ -269,12 +279,20 @@ export function BuildSummaryPanel({
 
       <div className="rounded-xl border border-[#0E79B2]/30 bg-[#0E79B2]/10 p-6">
         <p className="text-xs font-semibold tracking-wide text-[#7DD3FC] uppercase">
-          Total estimado
+          Total mínimo estimado
         </p>
         <p className="mt-2 text-4xl font-black tracking-tight tabular-nums text-[#FBFEF9]">
-          ${totalPrice.toLocaleString("es-CL")}
+          ${minimumTotal.total.toLocaleString("es-CL")}
         </p>
         <p className="mt-1 text-xs text-white/45">CLP</p>
+        {!minimumTotal.isComplete && (
+          <p className="mt-3 text-xs leading-relaxed text-amber-200" role="status">
+            Este subtotal no incluye {minimumTotal.missingPriceComponents.length}{" "}
+            {minimumTotal.missingPriceComponents.length === 1
+              ? "componente sin oferta disponible"
+              : "componentes sin oferta disponible"}.
+          </p>
+        )}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-5">

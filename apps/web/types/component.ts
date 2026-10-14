@@ -4,6 +4,17 @@
 
 import type { ComponentCategory } from "@/lib/categories";
 
+export interface StoreOffer {
+  storeId: string;
+  storeName: string;
+  storeWebsiteUrl?: string;
+  priceCash?: number;
+  priceNormal?: number;
+  productUrl?: string;
+  inStock: boolean;
+  updatedAt?: string;
+}
+
 export interface BaseComponent {
   id: string;
   /**
@@ -22,6 +33,8 @@ export interface BaseComponent {
   priceUpdatedAt?: string;
   /** Availability of the selected listing; absent on legacy saved snapshots. */
   inStock?: boolean;
+  /** Validated store listings; absent on legacy saved snapshots. */
+  offers?: StoreOffer[];
 }
 
 export interface CPUComponent extends BaseComponent {

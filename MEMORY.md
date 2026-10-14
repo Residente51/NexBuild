@@ -1,6 +1,6 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-10-11
+Updated: 2026-10-14
 
 ## Current Snapshot
 
@@ -81,6 +81,16 @@ The production and real-Auth facts above record the validated end-of-session sta
 - The five RAM slugs containing parentheses remain unchanged to preserve existing URLs: Corsair Vengeance DDR5, Corsair Vengeance LPX DDR4, G.Skill Trident Z5 RGB, Kingston FURY Beast DDR4, and TeamGroup T-Force Delta RGB. A future migration should add aliases/redirects before changing canonical slugs.
 - No schema, Auth, RLS, CSP, migration, environment, price, stock, Builder, or Compare change was required. `ComponentImage`, `validation.ts`, and `next.config.ts` remain unchanged.
 - Validation passed with 22 test files and 133 tests, production build, `git diff --check`, production read-back, and browser QA on desktop 1440x900 and mobile 390x844 across Home, catalog, representative case/cooler/ASUS details, and both Builder catalog modals. All 11 target images loaded, no HTTP 4xx/5xx or app console errors appeared, and fallback behavior remains covered by the unchanged validation/runtime path.
+
+## Stores & Price Comparison 1.0
+
+- The initial production audit found 46 active products and 46 listings: every product had exactly one listing, with 19 at PC Factory and 27 at SP Digital. The existing `stores` and `store_listings` schema already supported the milestone, so no migration was required.
+- A controlled, user-authorized production apply added Winpy, Alltec, and PC Express plus 8 exact offers covering 7 products. Read-back confirmed all 3 stores and all 8 listings. Production now has 54 listings; 7 products have multiple offers and 39 have one. A later dry-run reported `storesToInsert: 0`, `listingsToInsert: 0`, and `alreadyCurrent: 8`.
+- `apps/web/scripts/store-price-comparison-v1.json` is the reviewed payload. `apply-store-price-comparison.mjs` defaults to dry-run, validates product identity, HTTPS URLs, prices, store/listing uniqueness, and existing conflicts, and requires the exact `--apply --confirm=stores-price-comparison-v1` acknowledgement for writes.
+- Store offers are parsed at the repository boundary and ordered deterministically: available first, then effective price, then stable store identity. Effective price uses positive `price_cash` first and `price_normal` as fallback. Legacy saved-build snapshots remain valid through optional offers.
+- Catalog and Compare show `Desde` only when a product has more than one available offer. Detail pages show every valid offer in a semantic desktop table and responsive mobile cards. Builder shows `Total mínimo estimado` and explicitly counts selected components without a current offer; compatibility ownership and `evaluateBuild()` were not changed.
+- Validation passed with 24 test files and 140 tests, production build, `git diff --check`, idempotent production dry-run, and browser QA at 1440x900 and 390x844 across catalog, the three-offer Ryzen 7 7800X3D detail, an incomplete-priced Builder, and a two-product comparison. No same-origin HTTP errors, app console errors, or global horizontal overflow were observed.
+- Retail prices and stock are time-sensitive. Revalidate source pages before future writes. Prefer fewer exact SKU-level offers over ambiguous model-family matches; 39 products remain single-listing expansion candidates.
 
 ## Architectural Decisions to Preserve
 
