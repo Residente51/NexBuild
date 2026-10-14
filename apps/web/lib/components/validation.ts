@@ -1,5 +1,15 @@
 import { COMPONENT_CATEGORIES, type ComponentCategory } from "@/lib/categories";
-import type { BuildSelection, PCComponent } from "@/types/component";
+import {
+  getAvailableOffers,
+  getOfferPrice,
+  getValidOffers,
+  sortStoreOffers,
+} from "@/lib/components/pricing";
+import type {
+  BuildSelection,
+  PCComponent,
+  StoreOffer,
+} from "@/types/component";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -15,9 +25,9 @@ const UNAVAILABLE_LOCAL_IMAGE_PATHS = new Set([
 ]);
 
 export const PRODUCT_SELECT =
-  "id, slug, name, brand, category, specs, image_url, description, is_active, store_listings(price_cash, product_url, in_stock)";
+  "id, slug, name, brand, category, specs, image_url, description, is_active, store_listings(store_id, price_cash, price_normal, product_url, in_stock, updated_at, last_updated, stores(id, name, website_url))";
 export const LEGACY_PRODUCT_SELECT =
-  "id, slug, name, brand, category, specs, image_url, description, store_listings(price_cash, product_url, in_stock)";
+  "id, slug, name, brand, category, specs, image_url, description, store_listings(store_id, price_cash, price_normal, product_url, in_stock, updated_at, last_updated, stores(id, name, website_url))";
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -80,6 +90,61 @@ function optionalImageSource(value: unknown): string | undefined {
   return optionalHttpsUrl(value);
 }
 
+function optionalPositiveInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : undefined;
+}
+
+function nestedStore(value: unknown): UnknownRecord | null {
+  if (isRecord(value)) return value;
+  if (Array.isArray(value) && isRecord(value[0])) return value[0];
+  return null;
+}
+
+function parseStoreOffer(value: unknown): StoreOffer | null {
+  if (!isRecord(value)) return null;
+
+  const store = nestedStore(value.stores);
+  const storeId = value.storeId ?? value.store_id ?? store?.id;
+  const storeName = value.storeName ?? store?.name;
+  const inStock = value.inStock ?? value.in_stock;
+
+  if (
+    !isBoundedString(storeId, 128) ||
+    !isBoundedString(storeName, 200) ||
+    !isBoolean(inStock)
+  ) {
+    return null;
+  }
+
+  return {
+    storeId,
+    storeName,
+    storeWebsiteUrl: optionalHttpsUrl(
+      value.storeWebsiteUrl ?? store?.website_url,
+    ),
+    priceCash: optionalPositiveInteger(value.priceCash ?? value.price_cash),
+    priceNormal: optionalPositiveInteger(
+      value.priceNormal ?? value.price_normal,
+    ),
+    productUrl: optionalHttpsUrl(value.productUrl ?? value.product_url),
+    inStock,
+    updatedAt: optionalString(
+      value.updatedAt ?? value.last_updated ?? value.updated_at,
+    ),
+  };
+}
+
+function parseStoreOffers(value: unknown): StoreOffer[] {
+  if (!Array.isArray(value)) return [];
+  return getValidOffers(
+    value
+      .map(parseStoreOffer)
+      .filter((offer): offer is StoreOffer => offer !== null),
+  );
+}
+
 /** Parse and validate a domain component at an external-data boundary. */
 export function parsePCComponent(value: unknown): PCComponent | null {
   if (!isRecord(value)) return null;
@@ -110,6 +175,9 @@ export function parsePCComponent(value: unknown): PCComponent | null {
     productUrl: optionalHttpsUrl(value.productUrl),
     priceUpdatedAt: optionalString(value.priceUpdatedAt),
     inStock: isBoolean(value.inStock) ? value.inStock : undefined,
+    offers: Array.isArray(value.offers)
+      ? sortStoreOffers(parseStoreOffers(value.offers))
+      : undefined,
   };
 
   switch (category) {
@@ -274,19 +342,9 @@ export function parsePCComponent(value: unknown): PCComponent | null {
 export function parseProductRow(value: unknown): PCComponent | null {
   if (!isRecord(value)) return null;
 
-  const listings = Array.isArray(value.store_listings)
-    ? value.store_listings.filter(isRecord)
-    : [];
-  const pricedListings = listings.filter((listing) =>
-    isNonNegativeNumber(listing.price_cash),
-  );
-  const availableListings = pricedListings.filter(
-    (listing) => listing.in_stock === true,
-  );
-  const listingPool = availableListings.length > 0 ? availableListings : pricedListings;
-  const selectedListing = [...listingPool].sort(
-    (a, b) => Number(a.price_cash) - Number(b.price_cash),
-  )[0];
+  const offers = sortStoreOffers(parseStoreOffers(value.store_listings));
+  const availableOffers = getAvailableOffers(offers);
+  const selectedOffer = availableOffers[0] ?? offers[0];
 
   return parsePCComponent({
     id: value.id,
@@ -294,15 +352,14 @@ export function parseProductRow(value: unknown): PCComponent | null {
     name: value.name,
     brand: value.brand,
     category: value.category,
-    price: selectedListing?.price_cash ?? 0,
+    price: selectedOffer ? (getOfferPrice(selectedOffer) ?? 0) : 0,
     specs: value.specs,
     image: value.image_url,
     description: value.description,
-    productUrl: availableListings.length > 0
-      ? selectedListing?.product_url
-      : undefined,
-    priceUpdatedAt: selectedListing?.updated_at,
-    inStock: availableListings.length > 0,
+    productUrl: availableOffers[0]?.productUrl,
+    priceUpdatedAt: selectedOffer?.updatedAt,
+    inStock: availableOffers.length > 0,
+    offers,
   });
 }
 

@@ -11,6 +11,15 @@ vi.mock("@/lib/supabaseClient", () => ({
   getSupabasePublicClient: vi.fn(() => ({ from: fromMock })),
 }));
 
+const mockStoreListing = {
+  store_id: "test-store",
+  stores: {
+    id: "test-store",
+    name: "Tienda Test",
+    website_url: "https://example.com",
+  },
+};
+
 const mockSupabaseProduct = {
   id: "1",
   slug: "test-cpu",
@@ -28,7 +37,9 @@ const mockSupabaseProduct = {
   is_active: true,
   store_listings: [
     {
+      ...mockStoreListing,
       price_cash: 299_990,
+      price_normal: 309_990,
       product_url: "https://example.com/cpu",
       in_stock: true,
       updated_at: "2026-09-06T00:00:00.000Z",
@@ -76,9 +87,9 @@ describe("fetchCatalogFromSupabase", () => {
         {
           ...mockSupabaseProduct,
           store_listings: [
-            { price_cash: 250_000, in_stock: false },
-            { price_cash: 310_000, in_stock: true },
-            { price_cash: 299_000, in_stock: true },
+            { ...mockStoreListing, store_id: "sold-out", price_cash: 250_000, in_stock: false },
+            { ...mockStoreListing, store_id: "expensive", price_cash: 310_000, in_stock: true },
+            { ...mockStoreListing, store_id: "best", price_cash: 299_000, in_stock: true },
           ],
         },
       ],
@@ -124,7 +135,7 @@ describe("fetchCatalogFromSupabase", () => {
         {
           ...mockSupabaseProduct,
           store_listings: [
-            { price_cash: 250_000, in_stock: false, product_url: "https://example.com/old" },
+            { ...mockStoreListing, price_cash: 250_000, in_stock: false, product_url: "https://example.com/old" },
           ],
         },
       ],
@@ -145,6 +156,7 @@ describe("fetchCatalogFromSupabase", () => {
           image_url: "javascript:alert(1)",
           store_listings: [
             {
+              ...mockStoreListing,
               price_cash: 299_990,
               in_stock: true,
               product_url: "javascript:alert(1)",
@@ -159,6 +171,45 @@ describe("fetchCatalogFromSupabase", () => {
     expect(result.success && result.data[0]).toEqual(
       expect.objectContaining({ image: undefined, productUrl: undefined }),
     );
+  });
+
+  it("expone ofertas ordenadas y separa precio efectivo de normal", async () => {
+    mockQueryResult({
+      data: [
+        {
+          ...mockSupabaseProduct,
+          store_listings: [
+            {
+              ...mockStoreListing,
+              store_id: "second",
+              stores: { ...mockStoreListing.stores, id: "second", name: "Segunda" },
+              price_cash: 320_000,
+              price_normal: 330_000,
+              in_stock: true,
+            },
+            {
+              ...mockStoreListing,
+              store_id: "best",
+              stores: { ...mockStoreListing.stores, id: "best", name: "Mejor" },
+              price_cash: 299_000,
+              price_normal: 305_000,
+              in_stock: true,
+            },
+          ],
+        },
+      ],
+      error: null,
+    });
+
+    const result = await fetchCatalogFromSupabase();
+    expect(result.success && result.data[0].offers).toEqual([
+      expect.objectContaining({
+        storeId: "best",
+        priceCash: 299_000,
+        priceNormal: 305_000,
+      }),
+      expect.objectContaining({ storeId: "second", priceCash: 320_000 }),
+    ]);
   });
 
   it("omite referencias locales cuyos assets placeholder fueron retirados", async () => {
