@@ -248,6 +248,27 @@ const checkRamSlotCount: CompatibilityRule = (build) => {
   return [];
 };
 
+/** RAM ↔ Motherboard — faster kits may run below their advertised speed. */
+const checkRamMotherboardSpeed: CompatibilityRule = (build) => {
+  const { ram, motherboard } = build;
+  if (
+    !ram?.specs?.speed ||
+    !motherboard?.specs?.maxRamSpeed ||
+    ram.specs.speed <= motherboard.specs.maxRamSpeed
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      status: "warning",
+      componentCategories: ["ram", "motherboard"],
+      message: `La memoria ${ram.name} está especificada para ${ram.specs.speed} MHz, por encima de los ${motherboard.specs.maxRamSpeed} MHz admitidos por la placa madre ${motherboard.name}. Podría funcionar a una frecuencia menor según la configuración.`,
+      code: "RAM_MB_SPEED_ABOVE_SUPPORTED",
+    },
+  ];
+};
+
 /** Motherboard ↔ Case — form factor must be supported. */
 const checkMotherboardCaseFormFactor: CompatibilityRule = (build) => {
   const { motherboard, case: pcCase } = build;
@@ -542,6 +563,7 @@ const rules: CompatibilityRule[] = [
   checkCpuMotherboardSocket,
   checkRamMotherboardType,
   checkRamSlotCount,
+  checkRamMotherboardSpeed,
   checkStorageMotherboardPorts,
   checkMotherboardCaseFormFactor,
   checkGpuCaseLength,
