@@ -56,6 +56,14 @@ export function getTechnicalSpecifications(
         { label: "Formato", value: specs.formFactor.toUpperCase() },
         { label: "Tipo de memoria", value: specs.ramType.toUpperCase() },
         { label: "Ranuras RAM", value: formatNumber(specs.ramSlots) },
+        ...(specs.maxRamSpeed
+          ? [
+              {
+                label: "Velocidad máxima de RAM",
+                value: `${formatNumber(specs.maxRamSpeed)} MHz`,
+              },
+            ]
+          : []),
         { label: "Ranuras M.2", value: formatNumber(specs.m2Slots) },
         { label: "Puertos SATA", value: formatNumber(specs.sataPorts) },
       ];

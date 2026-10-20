@@ -317,6 +317,51 @@ describe("Capacidad de almacenamiento de la placa", () => {
   });
 });
 
+describe("Velocidad de RAM y placa madre", () => {
+  const buildWithRamSpeed = (ramSpeed: number, maxRamSpeed?: number) =>
+    evaluateBuild({
+      cpu: cpuRyzen7_7700X,
+      motherboard: {
+        ...mbMsiB650TomahawkWifi,
+        specs: {
+          ...mbMsiB650TomahawkWifi.specs!,
+          maxRamSpeed,
+        },
+      },
+      ram: {
+        ...ramCorsairVengeanceDdr5,
+        specs: { ...ramCorsairVengeanceDdr5.specs!, speed: ramSpeed },
+      },
+      gpu: gpuRtx4060,
+      storage: [storageNvme],
+      case: caseNzxtH6Flow,
+      cooler: coolerAio,
+      psu: psuCorsairRM850x,
+    });
+
+  it("advierte cuando el kit supera la velocidad informada por la placa", () => {
+    const report = buildWithRamSpeed(7_200, 6_400);
+
+    expect(report.status).toBe("warning");
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "RAM_MB_SPEED_ABOVE_SUPPORTED" }),
+      ]),
+    );
+  });
+
+  it("no inventa una restricción cuando la placa no informa el límite", () => {
+    const report = buildWithRamSpeed(7_200);
+
+    expect(report.status).toBe("compatible");
+    expect(report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "RAM_MB_SPEED_ABOVE_SUPPORTED" }),
+      ]),
+    );
+  });
+});
+
 describe("Espesor de GPU", () => {
   it("rechaza una GPU que ocupa más slots que el gabinete", () => {
     const report = evaluateBuild({

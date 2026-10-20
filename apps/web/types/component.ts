@@ -45,6 +45,7 @@ export interface MotherboardComponent extends BaseComponent {
     m2Slots: number;
     sataPorts: number;
     chipset?: string;
+    maxRamSpeed?: number;
   };
 }
 

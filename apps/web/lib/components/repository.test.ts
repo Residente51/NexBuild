@@ -89,6 +89,35 @@ describe("fetchCatalogFromSupabase", () => {
     expect(result.success && result.data[0].price).toBe(299_000);
   });
 
+  it("conserva el límite de velocidad RAM informado por la placa madre", async () => {
+    mockQueryResult({
+      data: [
+        {
+          ...mockSupabaseProduct,
+          slug: "test-motherboard",
+          name: "Test Motherboard",
+          category: "motherboard",
+          specs: {
+            socket: "AM5",
+            formFactor: "ATX",
+            ramType: "ddr5",
+            ramSlots: 4,
+            m2Slots: 2,
+            sataPorts: 4,
+            maxRamSpeed: 6_400,
+          },
+        },
+      ],
+      error: null,
+    });
+
+    const result = await fetchCatalogFromSupabase();
+
+    expect(result.success && result.data[0].specs).toEqual(
+      expect.objectContaining({ maxRamSpeed: 6_400 }),
+    );
+  });
+
   it("conserva el precio referencial pero marca productos sin stock", async () => {
     mockQueryResult({
       data: [

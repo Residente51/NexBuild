@@ -152,6 +152,9 @@ export function parsePCComponent(value: unknown): PCComponent | null {
           m2Slots: specs.m2Slots,
           sataPorts: specs.sataPorts,
           chipset: optionalString(specs.chipset),
+          maxRamSpeed: isPositiveNumber(specs.maxRamSpeed)
+            ? specs.maxRamSpeed
+            : undefined,
         },
       };
 
