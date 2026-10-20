@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "preparedAt": "2026-10-13",
+  "stores": [
+    {
+      "id": "winpy",
+      "slug": "winpy",
+      "name": "Winpy",
+      "websiteUrl": "https://www.winpy.cl"
+    },
+    {
+      "id": "alltec",
+      "slug": "alltec",
+      "name": "Alltec",
+      "websiteUrl": "https://www.alltec.cl"
+    },
+    {
+      "id": "pcexpress",
+      "slug": "pc-express",
+      "name": "PC Express",
+      "websiteUrl": "https://tienda.pc-express.cl"
+    }
+  ],
+  "listings": [
+    {
+      "productId": "89c2f213-78f8-4ced-b3da-32be43d29449",
+      "productSlug": "amd-ryzen-5-5600x",
+      "model": "100-100000065BOX",
+      "storeId": "pcexpress",
+      "priceCash": 189900,
+      "priceNormal": null,
+      "inStock": true,
+      "productUrl": "https://tienda.pc-express.cl/10682-procesador-amd-ryzen-5-5600x-3-7ghz-6-core-12-thread-sam4-p-n-100-100000065box",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    },
+    {
+      "productId": "c68a1ef4-5e1f-4e76-995b-e01aed950d48",
+      "productSlug": "amd-ryzen-5-7600x",
+      "model": "100-100000593WOF",
+      "storeId": "winpy",
+      "priceCash": 237728,
+      "priceNormal": 250240,
+      "inStock": true,
+      "productUrl": "https://www.winpy.cl/venta/procesador-amd-ryzen-5-7600x-am5-6-cores-12-hilos-4-7-5-3ghz-32mb-de-cache-desbloqueado/",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    },
+    {
+      "productId": "1e584fdf-aa79-4e0b-8a7e-07ac47f890d5",
+      "productSlug": "amd-ryzen-7-7800x3d",
+      "model": "100-100000910WOF",
+      "storeId": "winpy",
+      "priceCash": 462080,
+      "priceNormal": 486400,
+      "inStock": true,
+      "productUrl": "https://www.winpy.cl/venta/procesador-amd-ryzen-7-7800x3d-am5-8-cores-16-hilos-4-2-5-0ghz/",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    },
+    {
+      "productId": "1e584fdf-aa79-4e0b-8a7e-07ac47f890d5",
+      "productSlug": "amd-ryzen-7-7800x3d",
+      "model": "100-100000910WOF",
+      "storeId": "alltec",
+      "priceCash": 629900,
+      "priceNormal": 651946,
+      "inStock": true,
+      "productUrl": "https://www.alltec.cl/amd/2030-amd-ryzen-7-7800x3d-42ghz-50ghz-turbo-octa-core-tdp-120w-am5.html",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    },
+    {
+      "productId": "d60df45e-ba9e-40c4-b3f5-022d5588d231",
+      "productSlug": "amd-ryzen-9-7950x",
+      "model": "100-100000514WOF",
+      "storeId": "winpy",
+      "priceCash": 637792,
+      "priceNormal": 671360,
+      "inStock": true,
+      "productUrl": "https://www.winpy.cl/venta/procesador-amd-ryzen-9-7950x-am5-16-cores-32-hilos-4-5-5-7ghz-64mb-de-cache-desbloqueado/",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    },
+    {
+      "productId": "f5e541be-b392-4220-b3f7-bb2d1bb0cbab",
+      "productSlug": "intel-core-i5-12400f",
+      "model": "BX8071512400F",
+      "storeId": "winpy",
+      "priceCash": 180576,
+      "priceNormal": 190080,
+      "inStock": true,
+      "productUrl": "https://www.winpy.cl/venta/procesador-intel-core-i5-12400f-alder-lake-lga1700-6-cores-12-hilos-2-5-4-4ghz-sin-video/",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    },
+    {
+      "productId": "9e8901e5-3373-4bd9-b1a0-3826974f1ffd",
+      "productSlug": "intel-core-i5-14600k",
+      "model": "BX8071514600K",
+      "storeId": "alltec",
+      "priceCash": 359900,
+      "priceNormal": 372496,
+      "inStock": true,
+      "productUrl": "https://www.alltec.cl/intel/2514-intel-i5-14600k-35ghz53ghz-turbo-14c20t-24mb-cache-125w181w-lga1700-14th-generacion.html",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    },
+    {
+      "productId": "83389eb3-a9cf-4097-8b8f-5f8fe7e952e0",
+      "productSlug": "sapphire-pulse-amd-radeon-rx-7600",
+      "model": "11324-01-20G",
+      "storeId": "alltec",
+      "priceCash": 359900,
+      "priceNormal": 372496,
+      "inStock": true,
+      "productUrl": "https://www.alltec.cl/amd/2210-tv-sapphire-pulse-amd-radeon-rx-7600-8gb.html",
+      "verifiedAt": "2026-10-13T12:00:00-03:00"
+    }
+  ]
+}

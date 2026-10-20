@@ -6,6 +6,7 @@ import { ComponentImage } from "@/components/catalog/ComponentImage";
 import { Button, buttonClassName } from "@/components/ui/Button";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
+import { getComponentPriceLabel } from "@/lib/components/pricing";
 import {
   getStockLabel,
   getTechnicalSpecifications,
@@ -22,12 +23,6 @@ type ComparisonPageState = "loading" | "ready" | "error";
 interface ComparisonRow {
   label: string;
   values: string[];
-}
-
-function formatPrice(component: PCComponent): string {
-  return component.price > 0
-    ? `$${component.price.toLocaleString("es-CL")}`
-    : "Sin precio";
 }
 
 function hasDifference(values: string[]): boolean {
@@ -181,8 +176,8 @@ export function ComparisonView() {
         ),
       },
       {
-        label: "Precio",
-        values: components.map(formatPrice),
+        label: "Mejor precio",
+        values: components.map(getComponentPriceLabel),
       },
       {
         label: "Disponibilidad",
@@ -372,7 +367,7 @@ export function ComparisonView() {
                           key={`${components[index].slug}-${row.label}`}
                           className={`w-64 min-w-64 p-4 align-top text-sm text-white/75 ${
                             isDifferent ? "bg-[#0E79B2]/8" : ""
-                          } ${row.label === "Precio" ? "tabular-nums font-semibold text-[#FBFEF9]" : ""}`}
+                          } ${row.label === "Mejor precio" ? "tabular-nums font-semibold text-[#FBFEF9]" : ""}`}
                         >
                           {value}
                         </td>

@@ -1,10 +1,10 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-10-11
+Updated: 2026-10-20
 
 ## Current Snapshot
 
-- Stable branch: `main`; shared GitHub workflow documentation was merged through PR #17, followed by the repository-local continuity skill through PR #18 as `30aa02e`.
+- Stable branch: `main` at `625a380`; PR #20 merged RAM-speed compatibility on top of the workflow baseline from PRs #17-#19.
 - Main app: `apps/web`.
 - README and architecture artifacts reflect the current catalog, Builder, Auth, ownership, saved-build, and sharing architecture.
 - `AGENTS.md`, `docs/PROJECT_INSTRUCTIONS.md`, and `docs/STATUS.md` define GitHub as the source of truth and the handoff flow across ChatGPT, Codex, VS Code, and Work.
@@ -34,6 +34,7 @@ Updated: 2026-10-11
 - Builder guiado v1 is complete on `feat/guided-builder-v1`: `/builder` now offers an optional three-question guide with a separate persisted profile store, deterministic budget/category strategy, compatibility-aware candidate ranking, and a persistent summary above the unchanged manual Builder. It uses no AI, generates no complete build, and makes no benchmark or FPS claims.
 - Budget & Recommendations 1.1 is complete on `feat/budget-recommendations-v1`: the guided summary now shows deterministic category budget targets, spend, deviations, progress, and compatibility; the catalog highlights up to three guided candidates with explanations derived only from available price, compatibility, stock, and specification data. It uses no AI or benchmarks and keeps manual catalog choice available.
 - Product Imagery & Catalog Quality 1.0 is complete on `feat/catalog-quality-v1`: all 46 production products now have a validated image and description; the six Cooler Master additions received official imagery plus factual Spanish descriptions, and the five stale ASUS paths were replaced with official ASUS imagery.
+- Compatibility System 1.0 now preserves motherboard `maxRamSpeed`, shows it in technical specifications, and warns deterministically when a selected RAM kit exceeds the reported motherboard limit. PR #20 was merged to `main` as `625a380`.
 - `nexbuild.games` was validated working over HTTPS.
 - Production `NEXT_PUBLIC_SITE_URL` was set to `https://nexbuild.games`.
 - Supabase Site URL was set to `https://nexbuild.games`.
@@ -81,6 +82,24 @@ The production and real-Auth facts above record the validated end-of-session sta
 - The five RAM slugs containing parentheses remain unchanged to preserve existing URLs: Corsair Vengeance DDR5, Corsair Vengeance LPX DDR4, G.Skill Trident Z5 RGB, Kingston FURY Beast DDR4, and TeamGroup T-Force Delta RGB. A future migration should add aliases/redirects before changing canonical slugs.
 - No schema, Auth, RLS, CSP, migration, environment, price, stock, Builder, or Compare change was required. `ComponentImage`, `validation.ts`, and `next.config.ts` remain unchanged.
 - Validation passed with 22 test files and 133 tests, production build, `git diff --check`, production read-back, and browser QA on desktop 1440x900 and mobile 390x844 across Home, catalog, representative case/cooler/ASUS details, and both Builder catalog modals. All 11 target images loaded, no HTTP 4xx/5xx or app console errors appeared, and fallback behavior remains covered by the unchanged validation/runtime path.
+
+## Stores & Price Comparison 1.0
+
+- The initial production audit found 46 active products and 46 listings: every product had exactly one listing, with 19 at PC Factory and 27 at SP Digital. The existing `stores` and `store_listings` schema already supported the milestone, so no migration was required.
+- A controlled, user-authorized production apply added Winpy, Alltec, and PC Express plus 8 exact offers covering 7 products. A read-only audit on 2026-10-20 confirmed 46 active products, 54 listings, 7 products with multiple offers, 39 with one, and no active product without an offer. The idempotent dry-run reported `storesToInsert: 0`, `listingsToInsert: 0`, and `alreadyCurrent: 8`.
+- `apps/web/scripts/store-price-comparison-v1.json` is the reviewed payload. `apply-store-price-comparison.mjs` defaults to dry-run, validates product identity, HTTPS URLs, prices, store/listing uniqueness, and existing conflicts, and requires the exact `--apply --confirm=stores-price-comparison-v1` acknowledgement for writes.
+- Store offers are parsed at the repository boundary and ordered deterministically: available first, then effective price, then stable store identity. Effective price uses positive `price_cash` first and `price_normal` as fallback. Legacy saved-build snapshots remain valid through optional offers.
+- Catalog and Compare show `Desde` only when a product has more than one available offer. Detail pages show every valid offer in a semantic desktop table and responsive mobile cards. Builder shows `Total mínimo estimado` and explicitly counts selected components without a current offer; compatibility ownership and `evaluateBuild()` were not changed.
+- Validation passed with 24 test files and 140 tests, production build, `git diff --check`, idempotent production dry-run, and browser QA at 1440x900 and 390x844 across catalog, the three-offer Ryzen 7 7800X3D detail, an incomplete-priced Builder, and a two-product comparison. No same-origin HTTP errors, app console errors, or global horizontal overflow were observed.
+- Retail prices and stock are time-sensitive. Revalidate source pages before future writes. Prefer fewer exact SKU-level offers over ambiguous model-family matches; 39 products remain single-listing expansion candidates.
+
+## Store Comparison Reconciliation
+
+- `feat/store-price-comparison-v1-reconcile` was created from `origin/main` at `625a380` and recovered `fceb575` with a clean cherry-pick. The combined result preserves `StoreOffer`/`offers`, `maxRamSpeed` parsing, the RAM-speed warning, multi-store UI, minimum Builder totals, and the controlled payload/apply script.
+- Reconciliation validation passed: 45 focused tests, the full 24-file/143-test `check`, production build, `git diff --check`, and browser QA at 1440x900 and 390x844 for catalog, a three-offer detail, a two-product comparison, motherboard `maxRamSpeed`, the RAM-speed warning, and Builder minimum totals. No global overflow, console errors, or failed network responses were observed.
+- PR #2 remains open because its historical branch still contains manual Builder-catalog compatibility previews and item thumbnails that are not present as equivalent behavior on `main`; later guided ranking covers only the guided flow.
+- PR #5 remains open because `main` does not contain its `Ocultar iguales` control, price-difference annotations, or snap-based mobile comparison refinements. Reconcile or deliberately re-scope those changes separately.
+- Recommended next milestones: Store Coverage 1.1, Compatibility Data Audit 1.1, then authenticated E2E, Search Console, and dedicated social previews according to priority.
 
 ## Architectural Decisions to Preserve
 
