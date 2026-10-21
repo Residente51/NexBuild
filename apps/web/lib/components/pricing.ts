@@ -46,19 +46,31 @@ export function formatPrice(price: number): string {
   return `$${price.toLocaleString("es-CL")}`;
 }
 
+export function getComponentEffectivePrice(
+  component: PCComponent,
+): number | null {
+  if (component.offers) {
+    const offer = getBestOffer(component.offers);
+    return offer ? getOfferPrice(offer) : null;
+  }
+
+  if (component.inStock === false || !isValidPrice(component.price)) {
+    return null;
+  }
+
+  return component.price;
+}
+
 export function getComponentPriceLabel(component: PCComponent): string {
   if (component.offers) {
     const offers = getAvailableOffers(component.offers);
-    const bestPrice = offers[0] ? getOfferPrice(offers[0]) : null;
+    const bestPrice = getComponentEffectivePrice(component);
     if (bestPrice === null) return "Sin oferta disponible";
     return `${offers.length > 1 ? "Desde " : ""}${formatPrice(bestPrice)}`;
   }
 
-  if (component.inStock === false || !isValidPrice(component.price)) {
-    return "Sin oferta disponible";
-  }
-
-  return formatPrice(component.price);
+  const price = getComponentEffectivePrice(component);
+  return price === null ? "Sin oferta disponible" : formatPrice(price);
 }
 
 function getSelectedComponents(build: BuildSelection): PCComponent[] {
@@ -87,13 +99,9 @@ export function calculateMinimumBuildTotal(
   let total = 0;
 
   for (const component of getSelectedComponents(build)) {
-    const offer = component.offers ? getBestOffer(component.offers) : null;
-    const price = offer ? getOfferPrice(offer) : component.price;
-    const isAvailable = component.offers
-      ? offer !== null
-      : component.inStock !== false;
+    const price = getComponentEffectivePrice(component);
 
-    if (!isAvailable || !isValidPrice(price)) {
+    if (price === null) {
       missingPriceComponents.push(component);
       continue;
     }
