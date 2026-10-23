@@ -1,10 +1,10 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-10-20
+Updated: 2026-10-22
 
 ## Current Snapshot
 
-- Stable branch: `main` at `625a380`; PR #20 merged RAM-speed compatibility on top of the workflow baseline from PRs #17-#19.
+- Stable branch: `main` at `d91aada`; PR #21 reconciled Store Price Comparison 1.0 with the RAM-speed compatibility merged through PR #20.
 - Main app: `apps/web`.
 - README and architecture artifacts reflect the current catalog, Builder, Auth, ownership, saved-build, and sharing architecture.
 - `AGENTS.md`, `docs/PROJECT_INSTRUCTIONS.md`, and `docs/STATUS.md` define GitHub as the source of truth and the handoff flow across ChatGPT, Codex, VS Code, and Work.
@@ -100,6 +100,14 @@ The production and real-Auth facts above record the validated end-of-session sta
 - PR #2 remains open because its historical branch still contains manual Builder-catalog compatibility previews and item thumbnails that are not present as equivalent behavior on `main`; later guided ranking covers only the guided flow.
 - PR #5 remains open because `main` does not contain its `Ocultar iguales` control, price-difference annotations, or snap-based mobile comparison refinements. Reconcile or deliberately re-scope those changes separately.
 - Recommended next milestones: Store Coverage 1.1, Compatibility Data Audit 1.1, then authenticated E2E, Search Console, and dedicated social previews according to priority.
+
+## Builder Manual Preview Reconciliation
+
+- `feat/builder-preview-reconcile-v1` was created independently from `origin/main` at `d91aada`. It ports only the remaining useful scope from historical PR #2: manual catalog compatibility previews and component thumbnails.
+- Candidate previews simulate the selection immutably and reuse the current `evaluateBuild()` result. Storage candidates append only in the simulation; other categories replace their slot. Status precedence remains incompatible, warning, incomplete, then compatible, including `RAM_MB_SPEED_ABOVE_SUPPORTED`.
+- The catalog reuses `ComponentImage` and its fallback path, keeps the guided ranking UI unchanged, and uses the current multi-store price labels including `Desde`. No Auth, Supabase, schema, dependency, persisted-store, pricing-total, or compatibility-engine changes were required.
+- Validation passed with 33 focused tests, the full 25-file/147-test `check`, production build, `git diff --check`, and browser QA at 1440x900, 768x1024, and 390x844. Manual and guided flows, thumbnails, `Total mínimo estimado`, compatibility outcomes, scroll containment, and 44 px actions were verified without console errors, failed same-origin responses, or global overflow.
+- The replacement branch was pushed as `2fb0e6d`. Automatic PR creation returned `403 Resource not accessible by integration`; use `https://github.com/Residente51/NexBuild/compare/main...feat/builder-preview-reconcile-v1?expand=1`. Historical PR #2 remains open until the replacement PR is created and the superseding close comment can be posted.
 
 ## Architectural Decisions to Preserve
 
