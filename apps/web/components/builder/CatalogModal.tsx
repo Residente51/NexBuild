@@ -10,11 +10,19 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useBuildStore } from "@/store/useBuildStore";
 import { useGuidedBuilderStore } from "@/store/useGuidedBuilderStore";
+import { ComponentImage } from "@/components/catalog/ComponentImage";
 import { CATEGORY_LABELS } from "@/lib/categories";
 import { trackProductEvent } from "@/lib/analytics";
+import { getCandidateCompatibilityPreview } from "@/lib/build/candidateCompatibility";
 import { rankGuidedCandidateDetails } from "@/lib/build/guidance";
 import { fetchCatalogFromSupabase } from "@/lib/components/repository";
-import type { BuildSelection, PCComponent, StorageComponent } from "@/types/component";
+import { getComponentPriceLabel } from "@/lib/components/pricing";
+import type {
+  BuildSelection,
+  CompatibilityStatus,
+  PCComponent,
+  StorageComponent,
+} from "@/types/component";
 
 // ---------------------------------------------------------------------------
 // Spec badges — show the most relevant specs per category
@@ -95,6 +103,28 @@ interface CatalogModalProps {
 }
 
 type CatalogState = "idle" | "loading" | "ready" | "empty" | "error";
+
+const PREVIEW_STYLES: Record<
+  CompatibilityStatus,
+  { label: string; className: string }
+> = {
+  compatible: {
+    label: "Compatible con tu selección actual",
+    className: "border-emerald-400/20 bg-emerald-400/5 text-emerald-300",
+  },
+  warning: {
+    label: "Compatible con advertencias",
+    className: "border-builder-warning/20 bg-builder-warning/5 text-builder-warning",
+  },
+  incompatible: {
+    label: "Incompatible con tu selección actual",
+    className: "border-builder-danger/20 bg-builder-danger/5 text-builder-danger",
+  },
+  incomplete: {
+    label: "Compatibilidad por confirmar",
+    className: "border-white/15 bg-white/5 text-white/70",
+  },
+};
 
 export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
   const setComponent = useBuildStore((s) => s.setComponent);
@@ -220,8 +250,11 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
       badges: getSpecBadges(item),
       reasons: highlightedReasons.get(item.id) ?? [],
       isRecommended: highlightedReasons.has(item.id),
+      compatibility: guideEnabled
+        ? null
+        : getCandidateCompatibilityPreview(build, item),
     }));
-  }, [filtered, guideEnabled, rankedDetails]);
+  }, [build, filtered, guideEnabled, rankedDetails]);
 
   if (!isOpen || !category) return null;
 
@@ -341,7 +374,17 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                   </p>
                 </div>
               )}
-              {orderedWithBadges.map(({ item, badges, reasons, isRecommended }) => {
+              {orderedWithBadges.map(({
+                item,
+                badges,
+                reasons,
+                isRecommended,
+                compatibility,
+              }) => {
+                const previewStyle = compatibility
+                  ? PREVIEW_STYLES[compatibility.status]
+                  : null;
+
                 return (
                   <div
                     key={item.id}
@@ -351,54 +394,90 @@ export function CatalogModal({ isOpen, onClose, category }: CatalogModalProps) {
                                sm:flex-row sm:items-center"
                   >
                     {/* Info */}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-white/60">
-                        {item.brand}
-                      </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-[#FBFEF9]">
-                        {item.name}
-                      </p>
+                    <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#111119]">
+                        <ComponentImage
+                          src={item.image}
+                          alt={`${item.name} de ${item.brand}`}
+                          fill
+                          sizes="80px"
+                          className="object-contain p-2"
+                          fallback={
+                            <div className="flex h-full flex-col items-center justify-center px-2 text-center">
+                              <p className="text-[10px] font-black tracking-[0.12em] text-sky-200">
+                                {item.category.toUpperCase()}
+                              </p>
+                              <p className="mt-1 text-[9px] leading-tight text-white/40">
+                                {CATEGORY_LABELS[item.category]}
+                              </p>
+                            </div>
+                          }
+                        />
+                      </div>
 
-                      {guideEnabled && isRecommended && (
-                        <>
-                          <span className="mt-2 inline-flex rounded-full bg-[#0E79B2]/20 px-2.5 py-1 text-[11px] font-semibold text-[#7DD3FC]">
-                            Recomendado para tu guía
-                          </span>
-                          <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-white/65">
-                            {reasons.map((reason) => (
-                              <li key={reason} className="flex items-start gap-2">
-                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#38BDF8]" />
-                                <span>{reason}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-white/60">
+                          {item.brand}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#FBFEF9]">
+                          {item.name}
+                        </p>
 
-                      {/* Spec badges */}
-                      {badges.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {badges.map((badge) => (
-                            <span
-                              key={badge}
-                              className="inline-block rounded-md bg-white/5 px-2.5
-                                         py-1 text-[11px] font-medium text-white/60"
-                            >
-                              {badge}
+                        {guideEnabled && isRecommended && (
+                          <>
+                            <span className="mt-2 inline-flex rounded-full bg-[#0E79B2]/20 px-2.5 py-1 text-[11px] font-semibold text-[#7DD3FC]">
+                              Recomendado para tu guía
                             </span>
-                          ))}
-                        </div>
-                      )}
+                            <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-white/65">
+                              {reasons.map((reason) => (
+                                <li key={reason} className="flex items-start gap-2">
+                                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#38BDF8]" />
+                                  <span>{reason}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+
+                        {/* Spec badges */}
+                        {badges.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {badges.map((badge) => (
+                              <span
+                                key={badge}
+                                className="inline-block rounded-md bg-white/5 px-2.5
+                                           py-1 text-[11px] font-medium text-white/60"
+                              >
+                                {badge}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {compatibility && previewStyle && (
+                          <div
+                            data-compatibility-preview={compatibility.status}
+                            className={`mt-3 rounded-lg border px-3 py-2 ${previewStyle.className}`}
+                          >
+                            <p className="text-[11px] font-semibold">
+                              {previewStyle.label}
+                            </p>
+                            {compatibility.issues.length > 0 && (
+                              <ul className="mt-1 space-y-1 text-[11px] leading-relaxed text-white/60">
+                                {compatibility.issues.map((issue) => (
+                                  <li key={issue.code}>{issue.message}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Price + action */}
                     <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:gap-2">
                       <span className="text-sm font-bold tabular-nums text-[#38BDF8]">
-                        {item.inStock === false
-                          ? "Sin stock"
-                          : item.price > 0
-                          ? `$${item.price.toLocaleString("es-CL")}`
-                          : "Sin precio"}
+                        {getComponentPriceLabel(item)}
                       </span>
                       <button
                         type="button"
