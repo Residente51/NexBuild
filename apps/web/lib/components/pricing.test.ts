@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateMinimumBuildTotal,
   getBestOffer,
+  getComponentEffectivePrice,
   getComponentPriceLabel,
   getOfferPrice,
   sortStoreOffers,
@@ -68,6 +69,20 @@ describe("store pricing", () => {
 
   it("muestra Desde cuando hay más de una oferta disponible", () => {
     expect(getComponentPriceLabel(cpu)).toBe("Desde $110.000");
+  });
+
+  it("expone el mejor precio efectivo disponible para otros flujos", () => {
+    expect(getComponentEffectivePrice(cpu)).toBe(110_000);
+    expect(
+      getComponentEffectivePrice({
+        ...cpu,
+        price: 75_000,
+        offers: offers.map((offer) => ({ ...offer, inStock: false })),
+      }),
+    ).toBeNull();
+    expect(
+      getComponentEffectivePrice({ ...cpu, offers: undefined, price: 75_000 }),
+    ).toBe(75_000);
   });
 
   it("calcula el total mínimo y avisa precios faltantes", () => {
