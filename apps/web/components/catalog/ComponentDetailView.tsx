@@ -130,7 +130,7 @@ export function ComponentDetailView({
               </p>
             </div>
 
-            <ul className="mt-6 space-y-3 sm:hidden">
+            <ul className="mt-6 space-y-3 lg:hidden">
               {offers.map((offer) => {
                 const effectivePrice = getOfferPrice(offer);
                 return (
@@ -177,7 +177,7 @@ export function ComponentDetailView({
               })}
             </ul>
 
-            <div className="mt-6 hidden w-full max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-white/10 sm:block">
+            <div className="mt-6 hidden w-full max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-white/10 lg:block">
               <table className="w-full min-w-[680px] border-collapse text-left">
                 <thead className="bg-black/20 text-xs uppercase tracking-wide text-white/50">
                   <tr>
