@@ -1,6 +1,6 @@
 # NexBuild Status
 
-Updated: 2026-10-21
+Updated: 2026-10-28
 
 This is the concise current-state record for humans and agents. Git history, open pull requests, and live infrastructure remain authoritative for details that can change.
 
@@ -9,7 +9,7 @@ This is the concise current-state record for humans and agents. Git history, ope
 - Source of truth: `https://github.com/Residente51/NexBuild`
 - Stable branch: `main`
 - Main application: `apps/web`
-- Latest inspected `main`: `d91aada` (`feat(pricing): reconcile store comparison with compatibility updates (#21)`)
+- Latest inspected `main`: `a1d21e8` (`fix(catalog): prevent tablet offer-table overflow (#24)`)
 - Delivery rule: focused branch and pull request; no direct work on `main`
 - Shared workflow documentation was merged through PR #17, and the repository-local `nexbuild-continuity` skill was merged through PR #18.
 
@@ -22,7 +22,9 @@ This is the concise current-state record for humans and agents. Git history, ope
 - The optional guided Builder and budget recommendations are implemented without AI-generated builds or benchmark claims.
 - The production catalog contains 46 products according to the current repository handoff, with catalog imagery and descriptions completed through PR #16.
 - Stores & Price Comparison 1.0 and RAM-speed compatibility coexist on `main` through PR #21: catalog, detail, Builder, and Compare use current in-stock offers with cash-price priority and normal-price fallback. A read-only production audit on 2026-10-20 confirmed 46 active products, 54 listings, 7 products with multiple offers, 39 with one, and the Winpy, Alltec, and PC Express stores.
-- Compare reconciliation is published on `feat/compare-reconcile-v1`: it restores hide-equal, effective-price differences, and contained horizontal snap without reverting multi-store pricing semantics.
+- Compare reconciliation is merged through PR #22: `Ocultar iguales`, effective-price differences, contained horizontal snap, and fixed-column behavior coexist with current multi-store pricing semantics.
+- Manual Builder candidate compatibility preview and catalog thumbnails are merged through PR #23, reusing the current `evaluateBuild()` engine and pricing model.
+- PR #24 fixes the tablet-only global overflow on multi-store component detail pages by keeping offer cards through tablet widths and switching to the wide desktop table at `lg`.
 - Public Web Analytics is privacy-scoped to production and excludes Auth and private build routes.
 
 ## Verification baseline
@@ -30,23 +32,25 @@ This is the concise current-state record for humans and agents. Git history, ope
 - Repository quality gate: `pnpm run check` from `apps/web`.
 - Production build gate: `pnpm build` from `apps/web`.
 - Public browser smoke: `pnpm run test:smoke` from `apps/web`.
-- The reconciliation branch passed 45 focused tests, the 24-file/143-test full check, production build, diff check, and desktop/mobile browser QA on 2026-10-20.
-- `feat/compare-reconcile-v1` passed 9 focused tests, the 25-file/148-test full check, production build, diff check, and production-build QA with three products at 1440×900, 768×1024, and 390×844. Hide-equal, offer-aware price differences, snap, accessibility target size, console/network state, and overflow were verified.
+- Current repository baseline on 2026-10-27: `pnpm run check` passed with 26/26 test files and 152/152 tests; production build and `git diff --check` passed.
+- Production smoke passed with 46 usable products, Builder persistence/selection, login availability, anonymous `/builds` protection, safe invalid Auth callbacks, and no external failures.
+- QA covered catalog, multi-store detail, Compare, manual and guided Builder, compatibility preview, pricing, and responsive behavior. PR #24 additionally verified 390×844, 768×1024, and 1440×900 with no global overflow, console/page errors, failed HTTP responses, or actionable network failures.
 - Authenticated magic-link automation remains intentionally deferred; do not claim a live authenticated pass without a new end-to-end run.
 - Production, Supabase, Vercel, DNS, prices, stock, and external product data must be revalidated before relying on or changing them.
 
 ## Open repository items
 
-- PR #2, `feat/builder-1`, remains open and non-mergeable because it still contains manual Builder-catalog compatibility previews and thumbnails not equivalently present on `main`; reconcile or re-scope separately.
-- PR #5, `feat/compare-2`, is fully superseded in code by `feat/compare-reconcile-v1`, but remains open because the GitHub integration returned `403 Resource not accessible by integration` while creating the replacement PR. Create the replacement from the published branch, then close #5 as superseded.
+- No feature pull request is currently required to recover work from historical PRs #2 or #5: both are closed without merge after their useful scope was reconciled through PR #23 and PR #22 respectively.
 - Several merged feature branches remain on the remote. Branch presence does not mean work is unmerged; use pull request and ancestry evidence.
+- Authenticated end-to-end automation remains deferred.
+- Store coverage remains the largest measured product-data gap: the latest read-only production audit found 46 active products, 54 listings, 7 products with multiple offers, and 39 with only one offer.
 
 ## Next operating steps
 
-1. Store Coverage 1.1.
-2. Compatibility Data Audit 1.1.
-3. Authenticated E2E, Search Console, and dedicated social previews according to priority.
-4. Reconcile the unique remaining Builder work in PR #2 separately.
+1. Store Coverage 1.1: refresh time-sensitive offers and expand exact SKU-level multi-store coverage.
+2. Compatibility Data Audit 1.1: measure real specification coverage before adding more deterministic rules.
+3. Authenticated E2E.
+4. Search Console and dedicated social/Open Graph previews.
 
 ## Security boundaries
 
