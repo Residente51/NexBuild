@@ -1,15 +1,16 @@
 # NexBuild — Session Handoff
 
-Updated: 2026-10-22
+Updated: 2026-10-28
 
 ## Current Snapshot
 
-- Stable branch: `main` at `d91aada`; PR #21 reconciled Store Price Comparison 1.0 with the RAM-speed compatibility merged through PR #20.
+- Stable branch: `main` at `a1d21e8`; PR #22 merged the Compare reconciliation, PR #23 merged manual Builder compatibility preview/thumbnails, and PR #24 fixed tablet overflow on multi-store detail pages.
 - Main app: `apps/web`.
 - README and architecture artifacts reflect the current catalog, Builder, Auth, ownership, saved-build, and sharing architecture.
 - `AGENTS.md`, `docs/PROJECT_INSTRUCTIONS.md`, and `docs/STATUS.md` define GitHub as the source of truth and the handoff flow across ChatGPT, Codex, VS Code, and Work.
 - `.agents/skills/nexbuild-continuity/SKILL.md` provides the reusable resume, review, and handoff workflow for agents that support repository-local skills.
 - The architecture visual check currently reports `pass`.
+- Latest full quality baseline: 26/26 test files and 152/152 tests, production build, `git diff --check`, public smoke, and responsive QA all passed on 2026-10-27/28.
 
 ## Completed
 
@@ -97,8 +98,9 @@ The production and real-Auth facts above record the validated end-of-session sta
 
 - `feat/store-price-comparison-v1-reconcile` was created from `origin/main` at `625a380` and recovered `fceb575` with a clean cherry-pick. The combined result preserves `StoreOffer`/`offers`, `maxRamSpeed` parsing, the RAM-speed warning, multi-store UI, minimum Builder totals, and the controlled payload/apply script.
 - Reconciliation validation passed: 45 focused tests, the full 24-file/143-test `check`, production build, `git diff --check`, and browser QA at 1440x900 and 390x844 for catalog, a three-offer detail, a two-product comparison, motherboard `maxRamSpeed`, the RAM-speed warning, and Builder minimum totals. No global overflow, console errors, or failed network responses were observed.
-- PR #2 remains open because its historical branch still contains manual Builder-catalog compatibility previews and item thumbnails that are not present as equivalent behavior on `main`; later guided ranking covers only the guided flow.
-- PR #5 remains open because `main` does not contain its `Ocultar iguales` control, price-difference annotations, or snap-based mobile comparison refinements. Reconcile or deliberately re-scope those changes separately.
+- Historical PR #5 was superseded by PR #22, which merged `Ocultar iguales`, offer-aware price differences, contained horizontal snap, and the fixed comparison column onto the current pricing model.
+- Historical PR #2 was superseded by PR #23, which merged manual candidate compatibility preview and catalog thumbnails while reusing `evaluateBuild()` and current multi-store pricing.
+- PR #24 fixed the tablet-only global overflow on multi-store component detail pages. Offer cards remain through tablet widths and the wide semantic table begins at `lg`.
 - Recommended next milestones: Store Coverage 1.1, Compatibility Data Audit 1.1, then authenticated E2E, Search Console, and dedicated social previews according to priority.
 
 ## Builder Manual Preview Reconciliation
@@ -107,7 +109,7 @@ The production and real-Auth facts above record the validated end-of-session sta
 - Candidate previews simulate the selection immutably and reuse the current `evaluateBuild()` result. Storage candidates append only in the simulation; other categories replace their slot. Status precedence remains incompatible, warning, incomplete, then compatible, including `RAM_MB_SPEED_ABOVE_SUPPORTED`.
 - The catalog reuses `ComponentImage` and its fallback path, keeps the guided ranking UI unchanged, and uses the current multi-store price labels including `Desde`. No Auth, Supabase, schema, dependency, persisted-store, pricing-total, or compatibility-engine changes were required.
 - Validation passed with 33 focused tests, the full 25-file/147-test `check`, production build, `git diff --check`, and browser QA at 1440x900, 768x1024, and 390x844. Manual and guided flows, thumbnails, `Total mínimo estimado`, compatibility outcomes, scroll containment, and 44 px actions were verified without console errors, failed same-origin responses, or global overflow.
-- The replacement branch was pushed as `2fb0e6d`. Automatic PR creation returned `403 Resource not accessible by integration`; use `https://github.com/Residente51/NexBuild/compare/main...feat/builder-preview-reconcile-v1?expand=1`. Historical PR #2 remains open until the replacement PR is created and the superseding close comment can be posted.
+- PR #23 merged this reconciliation into `main` as `cf2e574`; historical PR #2 is closed without merge.
 
 ## Architectural Decisions to Preserve
 
