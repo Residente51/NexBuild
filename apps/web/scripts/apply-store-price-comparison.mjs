@@ -1,12 +1,15 @@
 import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const PAYLOAD_PATH = resolve(SCRIPT_DIR, "store-price-comparison-v1.json");
+export const DEFAULT_PAYLOAD_FILENAME = "store-price-comparison-v1.json";
 export const APPLY_CONFIRMATION = "stores-price-comparison-v1";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PAYLOAD_FILENAME_PATTERN = /^store-price-comparison-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.json$/;
+const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|([+-])(\d{2}):(\d{2}))$/;
+const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const PRODUCT_IDENTITY_FIELDS = ["sku", "model", "partNumber", "part_number", "mpn"];
 
 function normalizedUrl(value) {
@@ -21,7 +24,9 @@ function normalizedUrl(value) {
 
 function isHttpsUrl(value) {
   const url = normalizedUrl(value);
-  return url !== null && new URL(url).protocol === "https:";
+  if (url === null) return false;
+  const parsed = new URL(url);
+  return parsed.protocol === "https:" && parsed.username === "" && parsed.password === "";
 }
 
 function isPositiveInteger(value) {
@@ -29,7 +34,67 @@ function isPositiveInteger(value) {
 }
 
 function normalizedIdentity(value) {
-  return typeof value === "string" ? value.trim().replace(/\s+/g, "").toUpperCase() : "";
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+export function parseIsoTimestamp(value) {
+  if (typeof value !== "string") return null;
+  const match = ISO_TIMESTAMP_PATTERN.exec(value);
+  if (!match) return null;
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , zone, , offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const offsetHour = zone === "Z" ? 0 : Number(offsetHourText);
+  const offsetMinute = zone === "Z" ? 0 : Number(offsetMinuteText);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (
+    month < 1 || month > 12 ||
+    day < 1 || day > daysInMonth ||
+    hour > 23 || minute > 59 || second > 59 ||
+    offsetHour > 14 || offsetMinute > 59 || (offsetHour === 14 && offsetMinute !== 0)
+  ) return null;
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+export function resolvePayloadPath(filename = DEFAULT_PAYLOAD_FILENAME) {
+  if (
+    typeof filename !== "string" ||
+    basename(filename) !== filename ||
+    !PAYLOAD_FILENAME_PATTERN.test(filename)
+  ) {
+    throw new Error("Payload must be a store-price-comparison-*.json file inside apps/web/scripts");
+  }
+  return resolve(SCRIPT_DIR, filename);
+}
+
+export function parseCliOptions(argv) {
+  let isApply = false;
+  let confirmation;
+  let payloadFilename = DEFAULT_PAYLOAD_FILENAME;
+  let payloadSpecified = false;
+
+  for (const argument of argv) {
+    if (argument === "--apply" && !isApply) {
+      isApply = true;
+    } else if (argument.startsWith("--confirm=") && confirmation === undefined) {
+      confirmation = argument.slice("--confirm=".length);
+    } else if (argument.startsWith("--payload=") && !payloadSpecified) {
+      payloadFilename = argument.slice("--payload=".length);
+      payloadSpecified = true;
+    } else {
+      throw new Error(`Unknown or duplicate argument: ${argument}`);
+    }
+  }
+
+  resolvePayloadPath(payloadFilename);
+  return { isApply, confirmation, payloadFilename };
 }
 
 function productIdentityValues(product) {
@@ -39,7 +104,7 @@ function productIdentityValues(product) {
     .filter(Boolean);
 }
 
-export function validatePayload(payload) {
+export function validatePayload(payload, { now = Date.now() } = {}) {
   const errors = [];
   if (payload?.version !== 1) errors.push("version must be 1");
   if (!Array.isArray(payload?.stores) || payload.stores.length === 0) errors.push("stores must be a non-empty array");
@@ -83,8 +148,11 @@ export function validatePayload(payload) {
     }
     if (typeof listing.inStock !== "boolean") errors.push(`listings[${index}].inStock must be boolean`);
     if (!isHttpsUrl(listing.productUrl)) errors.push(`listings[${index}].productUrl must use HTTPS`);
-    if (typeof listing.verifiedAt !== "string" || Number.isNaN(Date.parse(listing.verifiedAt))) {
-      errors.push(`listings[${index}].verifiedAt is invalid`);
+    const verifiedAt = parseIsoTimestamp(listing.verifiedAt);
+    if (verifiedAt === null) {
+      errors.push(`listings[${index}].verifiedAt must be a real ISO timestamp with timezone`);
+    } else if (verifiedAt > now + MAX_FUTURE_SKEW_MS) {
+      errors.push(`listings[${index}].verifiedAt is too far in the future`);
     }
 
     const key = `${listing.productId}:${listing.storeId}`;
@@ -143,7 +211,7 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
       productsCovered: new Set(payload.listings.map((listing) => listing.productId)).size,
     },
     stores: { inserts: [], unchanged: [], conflicts: [] },
-    listings: { inserts: [], updates: [], unchanged: [], conflicts: [], outOfStock: [] },
+    listings: { inserts: [], updates: [], refreshes: [], unchanged: [], conflicts: [], blocked: [], outOfStock: [] },
   };
   const productById = new Map(products.map((product) => [product.id, product]));
   const storesById = groupBy(existingStores, (store) => store.id);
@@ -156,6 +224,18 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
     existingListings.filter((item) => normalizedUrl(item.product_url)),
     (item) => normalizedUrl(item.product_url),
   );
+
+  for (const listing of payload.listings) {
+    if (listing.priceCash === null) {
+      const key = payloadListingKey(listing);
+      plan.listings.blocked.push(conflict(
+        "listing",
+        "price-cash-null-schema-unconfirmed",
+        key,
+        `Apply cannot write priceCash:null for ${listing.productSlug}/${listing.storeId} because schema nullability is unconfirmed`,
+      ));
+    }
+  }
 
   for (const store of payload.stores) {
     const matchesById = storesById.get(store.id) ?? [];
@@ -213,8 +293,27 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
       plan.listings.conflicts.push(conflict("listing", "url-mismatch", key, `Existing listing URL conflicts for ${listing.productSlug}/${listing.storeId}`));
       continue;
     }
+    const existingTimestamp = parseIsoTimestamp(existing.last_updated);
+    const requestedTimestamp = parseIsoTimestamp(listing.verifiedAt);
+    if (existingTimestamp === null) {
+      plan.listings.blocked.push(conflict("listing", "invalid-last-updated", key, `Existing last_updated is invalid for ${listing.productSlug}/${listing.storeId}`));
+      continue;
+    }
+    if (requestedTimestamp < existingTimestamp) {
+      plan.listings.blocked.push(conflict("listing", "stale-verified-at", key, `verifiedAt is older than existing last_updated for ${listing.productSlug}/${listing.storeId}`));
+      continue;
+    }
+    if (requestedTimestamp === existingTimestamp) {
+      if (listingMatches(existing, listing)) {
+        plan.listings.unchanged.push(listing);
+      } else {
+        plan.listings.blocked.push(conflict("listing", "timestamp-collision", key, `Equal verifiedAt cannot change commercial data for ${listing.productSlug}/${listing.storeId}`));
+      }
+      continue;
+    }
+
     if (listingMatches(existing, listing)) {
-      plan.listings.unchanged.push(listing);
+      plan.listings.refreshes.push({ listing, existing });
       continue;
     }
 
@@ -238,9 +337,11 @@ export function summarizePlan(plan, mode) {
     listingsPrepared: plan.prepared.listings,
     listingsToInsert: plan.listings.inserts.length,
     listingsToUpdate: plan.listings.updates.length,
+    listingsToRefresh: plan.listings.refreshes.length,
     productsCovered: plan.prepared.productsCovered,
     alreadyCurrent: plan.listings.unchanged.length,
     conflicts: plan.stores.conflicts.length + plan.listings.conflicts.length,
+    blocked: plan.listings.blocked.length,
     outOfStock: plan.listings.outOfStock.length,
   };
 }
@@ -268,9 +369,29 @@ function logConflicts(plan, logger) {
   for (const item of [...plan.stores.conflicts, ...plan.listings.conflicts]) {
     logger(`CONFLICT ${item.code} ${item.key}: ${item.message}`);
   }
+  for (const item of plan.listings.blocked) {
+    logger(`BLOCKED ${item.code} ${item.key}: ${item.message}`);
+  }
 }
 
-export async function runMaintenance({ supabase, payload, isApply = false, confirmation = undefined, logger = console.log }) {
+export class PartialApplyError extends Error {
+  constructor(message, execution, cause) {
+    super(message, { cause });
+    this.name = "PartialApplyError";
+    this.execution = execution;
+  }
+}
+
+/**
+ * @param {{
+ *   supabase: any,
+ *   payload: any,
+ *   isApply?: boolean,
+ *   confirmation?: string,
+ *   logger?: (message: string) => void,
+ * }} options
+ */
+export async function runMaintenance({ supabase, payload, isApply = false, confirmation, logger = console.log }) {
   const validationErrors = validatePayload(payload);
   if (validationErrors.length > 0) throw new Error(`Invalid payload:\n- ${validationErrors.join("\n- ")}`);
   if (isApply && confirmation !== APPLY_CONFIRMATION) throw new Error(`Apply requires --confirm=${APPLY_CONFIRMATION}`);
@@ -285,85 +406,122 @@ export async function runMaintenance({ supabase, payload, isApply = false, confi
     logger(`Dry-run only. Use --apply --confirm=${APPLY_CONFIRMATION} after authentic retailer verification.`);
     return { summary, plan, writesPerformed: false };
   }
-  if (summary.conflicts > 0) {
+  if (summary.conflicts > 0 || summary.blocked > 0) {
     logConflicts(plan, logger);
-    throw new Error("Apply blocked because maintenance conflicts must be resolved first");
+    throw new Error("Apply blocked because all conflicts and blocked listings must be resolved before any write");
   }
 
-  if (plan.stores.inserts.length > 0) {
-    assertNoError(
-      await supabase.from("stores").insert(plan.stores.inserts.map((store) => ({
-        id: store.id,
-        slug: store.slug,
-        name: store.name,
-        website_url: store.websiteUrl,
-      }))),
-      "Store insert failed",
-    );
-  }
-  if (plan.listings.inserts.length > 0) {
-    assertNoError(
-      await supabase.from("store_listings").insert(plan.listings.inserts.map((listing) => ({
-        product_id: listing.productId,
-        store_id: listing.storeId,
-        price_cash: listing.priceCash,
-        price_normal: listing.priceNormal,
-        in_stock: listing.inStock,
-        product_url: listing.productUrl,
-        last_updated: listing.verifiedAt,
-      }))),
-      "Listing insert failed",
-    );
-  }
-  for (const { listing } of plan.listings.updates) {
-    const updatedRows = assertNoError(
-      await supabase.from("store_listings")
-        .update({
+  let writeAttempted = false;
+  const execution = { status: "applying", storesInserted: 0, listingsInserted: 0, listingsUpdated: 0, listingsRefreshed: 0 };
+  let postPlan;
+  let postSummary;
+  try {
+    if (plan.stores.inserts.length > 0) {
+      writeAttempted = true;
+      assertNoError(
+        await supabase.from("stores").insert(plan.stores.inserts.map((store) => ({
+          id: store.id,
+          slug: store.slug,
+          name: store.name,
+          website_url: store.websiteUrl,
+        }))),
+        "Store insert failed",
+      );
+      execution.storesInserted = plan.stores.inserts.length;
+    }
+    if (plan.listings.inserts.length > 0) {
+      writeAttempted = true;
+      assertNoError(
+        await supabase.from("store_listings").insert(plan.listings.inserts.map((listing) => ({
+          product_id: listing.productId,
+          store_id: listing.storeId,
           price_cash: listing.priceCash,
           price_normal: listing.priceNormal,
           in_stock: listing.inStock,
+          product_url: listing.productUrl,
           last_updated: listing.verifiedAt,
-        })
-        .eq("product_id", listing.productId)
-        .eq("store_id", listing.storeId)
-        .select("id"),
-      `Listing update failed for ${listing.productSlug}/${listing.storeId}`,
+        }))),
+        "Listing insert failed",
+      );
+      execution.listingsInserted = plan.listings.inserts.length;
+    }
+    for (const { listing, existing } of plan.listings.updates) {
+      writeAttempted = true;
+      const updatedRows = assertNoError(
+        await supabase.from("store_listings")
+          .update({
+            price_cash: listing.priceCash,
+            price_normal: listing.priceNormal,
+            in_stock: listing.inStock,
+            last_updated: listing.verifiedAt,
+          })
+          .eq("id", existing.id)
+          .eq("last_updated", existing.last_updated)
+          .select("id"),
+        `Listing update failed for ${listing.productSlug}/${listing.storeId}`,
+      );
+      if (updatedRows.length !== 1) throw new Error(`Listing update lost its preflight version for ${listing.productSlug}/${listing.storeId}`);
+      execution.listingsUpdated += 1;
+    }
+    for (const { listing, existing } of plan.listings.refreshes) {
+      writeAttempted = true;
+      const updatedRows = assertNoError(
+        await supabase.from("store_listings")
+          .update({ last_updated: listing.verifiedAt })
+          .eq("id", existing.id)
+          .eq("last_updated", existing.last_updated)
+          .select("id"),
+        `Listing freshness update failed for ${listing.productSlug}/${listing.storeId}`,
+      );
+      if (updatedRows.length !== 1) throw new Error(`Listing freshness update lost its preflight version for ${listing.productSlug}/${listing.storeId}`);
+      execution.listingsRefreshed += 1;
+    }
+
+    const postState = await readCurrentState(supabase, payload);
+    postPlan = buildMaintenancePlan({ payload, ...postState });
+    postSummary = summarizePlan(postPlan, "post-apply-dry-run");
+    if (
+      postSummary.storesToInsert !== 0 ||
+      postSummary.listingsToInsert !== 0 ||
+      postSummary.listingsToUpdate !== 0 ||
+      postSummary.listingsToRefresh !== 0 ||
+      postSummary.conflicts !== 0 ||
+      postSummary.blocked !== 0 ||
+      postSummary.alreadyCurrent !== payload.listings.length ||
+      postPlan.stores.unchanged.length !== payload.stores.length
+    ) {
+      throw new Error("Post-apply read-back is not idempotent");
+    }
+  } catch (error) {
+    if (!writeAttempted) throw error;
+    execution.status = "partial-or-unknown";
+    logger(JSON.stringify(execution, null, 2));
+    throw new PartialApplyError(
+      "Apply stopped with partial or uncertain execution. No multi-operation transaction exists; re-run dry-run, reconcile the reported state, then retry the same payload idempotently.",
+      execution,
+      error,
     );
-    if (updatedRows.length !== 1) throw new Error(`Listing update count mismatch for ${listing.productSlug}/${listing.storeId}`);
   }
 
-  const postState = await readCurrentState(supabase, payload);
-  const postPlan = buildMaintenancePlan({ payload, ...postState });
-  const postSummary = summarizePlan(postPlan, "post-apply-dry-run");
-  if (
-    postSummary.storesToInsert !== 0 ||
-    postSummary.listingsToInsert !== 0 ||
-    postSummary.listingsToUpdate !== 0 ||
-    postSummary.conflicts !== 0 ||
-    postSummary.alreadyCurrent !== payload.listings.length ||
-    postPlan.stores.unchanged.length !== payload.stores.length
-  ) {
-    throw new Error("Post-apply read-back is not idempotent");
-  }
-
+  execution.status = "verified";
   const result = {
     ...summary,
     verifiedStores: postPlan.stores.unchanged.length,
     verifiedListings: postSummary.alreadyCurrent,
     idempotent: true,
+    execution,
   };
   logger(JSON.stringify(result, null, 2));
-  return { summary: result, plan, postPlan, writesPerformed: true };
+  return { summary: result, plan, postPlan, writesPerformed: writeAttempted };
 }
 
-async function loadPayload() {
-  return JSON.parse(await readFile(PAYLOAD_PATH, "utf8"));
+async function loadPayload(filename) {
+  return JSON.parse(await readFile(resolvePayloadPath(filename), "utf8"));
 }
 
 async function main() {
-  const payload = await loadPayload();
-  const isApply = process.argv.includes("--apply");
-  const confirmation = process.argv.find((argument) => argument.startsWith("--confirm="))?.split("=")[1];
+  const { isApply, confirmation, payloadFilename } = parseCliOptions(process.argv.slice(2));
+  const payload = await loadPayload(payloadFilename);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
