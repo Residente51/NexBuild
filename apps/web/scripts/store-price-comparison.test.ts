@@ -31,6 +31,10 @@ const payload = JSON.parse(
   readFileSync(resolve(process.cwd(), "scripts/store-price-comparison-v1.json"), "utf8"),
 ) as Payload;
 
+const b2Payload = JSON.parse(
+  readFileSync(resolve(process.cwd(), "scripts/store-price-comparison-b2.json"), "utf8"),
+) as Payload;
+
 const productId = "89c2f213-78f8-4ced-b3da-32be43d29449";
 const secondProductId = "c68a1ef4-5e1f-4e76-995b-e01aed950d48";
 const store: Store = {
@@ -196,6 +200,17 @@ describe("Stores & Price Comparison 1.0 payload", () => {
     expect(validatePayload({ ...basePayload, listings: [listing, duplicate] })).toContain(
       `duplicate listing URL ${listing.productUrl}`,
     );
+  });
+});
+
+describe("Store Coverage 1.1 B2 payload", () => {
+  it("mantiene el lote válido, trazable y sin precios contado nulos", () => {
+    expect(validatePayload(b2Payload)).toEqual([]);
+    expect(b2Payload.listings.map(({ productSlug, storeId }) => `${productSlug}:${storeId}`)).toEqual([
+      "sapphire-pulse-amd-radeon-rx-7600:alltec",
+      "intel-core-i9-14900k:centrale",
+    ]);
+    expect(b2Payload.listings.every(({ priceCash }) => Number.isSafeInteger(priceCash) && (priceCash ?? 0) > 0)).toBe(true);
   });
 });
 
