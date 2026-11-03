@@ -148,9 +148,21 @@ describe("Stores & Price Comparison 1.0 payload", () => {
     );
   });
 
-  it("exige un timestamp ISO real con zona y rechaza fechas futuras engañosas", () => {
+  it("preserva orden temporal con 0, 3 y 6 decimales y zonas equivalentes", () => {
+    const wholeSecond = parseIsoTimestamp("2026-11-02T15:00:00Z");
+    const milliseconds = parseIsoTimestamp("2026-11-02T15:00:00.123Z");
+    const microseconds = parseIsoTimestamp("2026-11-02T12:00:00.123456-03:00");
+
+    expect(wholeSecond).toBe(parseIsoTimestamp("2026-11-02T12:00:00-03:00"));
+    expect(milliseconds).toBe(parseIsoTimestamp("2026-11-02T15:00:00.123000+00:00"));
+    expect(microseconds).toBe((milliseconds as bigint) + BigInt(456));
+  });
+
+  it("exige un timestamp ISO real con zona y rechaza fechas u offsets inválidos", () => {
     expect(parseIsoTimestamp("2026-02-30T12:00:00-03:00")).toBeNull();
     expect(parseIsoTimestamp("2026-11-02T12:00:00")).toBeNull();
+    expect(parseIsoTimestamp("2026-11-02T12:00:00.1234567Z")).toBeNull();
+    expect(parseIsoTimestamp("2026-11-02T12:00:00+14:01")).toBeNull();
 
     const invalidDate = { ...listing, verifiedAt: "2026-02-30T12:00:00-03:00" };
     expect(validatePayload({ ...basePayload, listings: [invalidDate] }, { now: Date.parse("2026-11-02T15:00:00Z") })).toContain(
@@ -223,6 +235,28 @@ describe("store listing maintenance plan", () => {
     const collision = makePlan({ currentListings: [existingListing({ price_cash: 90_000 })] });
     expect(collision.listings.blocked).toEqual([expect.objectContaining({ code: "timestamp-collision" })]);
     expect(collision.listings.updates).toHaveLength(0);
+  });
+
+  it("ordena microsegundos antes, igual y después sin depender de la representación de zona", () => {
+    const existing = existingListing({ last_updated: "2026-11-02T15:00:00.123456+00:00" });
+
+    const stale = makePlan({
+      requestedListing: { ...listing, verifiedAt: "2026-11-02T15:00:00.123455Z" },
+      currentListings: [existing],
+    });
+    expect(stale.listings.blocked).toEqual([expect.objectContaining({ code: "stale-verified-at" })]);
+
+    const retry = makePlan({
+      requestedListing: { ...listing, verifiedAt: "2026-11-02T12:00:00.123456-03:00" },
+      currentListings: [existing],
+    });
+    expect(retry.listings.unchanged).toHaveLength(1);
+
+    const refresh = makePlan({
+      requestedListing: { ...listing, verifiedAt: "2026-11-02T15:00:00.123457Z" },
+      currentListings: [existing],
+    });
+    expect(refresh.listings.refreshes).toHaveLength(1);
   });
 
   it("clasifica una revalidación más reciente sin cambios como refresh", () => {
@@ -411,6 +445,27 @@ describe("store listing maintenance runner", () => {
       price_cash: listing.priceCash,
       last_updated: listing.verifiedAt,
     });
+  });
+
+  it("usa la representación exacta leída de Supabase en el update optimista", async () => {
+    const rows = {
+      products: [{ ...product }],
+      stores: [{ ...existingStore }],
+      store_listings: [existingListing({ last_updated: "2026-11-02T15:00:00.123456+00:00" })],
+    };
+    const fake = createMutableSupabase(rows);
+    const verifiedAt = "2026-11-02T15:00:00.123457Z";
+
+    const result = await runMaintenance({
+      supabase: fake.client,
+      payload: { ...basePayload, listings: [{ ...listing, verifiedAt }] },
+      isApply: true,
+      confirmation: APPLY_CONFIRMATION,
+      logger: () => undefined,
+    });
+
+    expect(result.summary).toMatchObject({ listingsToRefresh: 1, idempotent: true });
+    expect(rows.store_listings[0].last_updated).toBe(verifiedAt);
   });
 
   it("reporta fallo parcial y permite recuperar con un reintento idempotente", async () => {

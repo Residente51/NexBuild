@@ -8,8 +8,9 @@ export const DEFAULT_PAYLOAD_FILENAME = "store-price-comparison-v1.json";
 export const APPLY_CONFIRMATION = "stores-price-comparison-v1";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PAYLOAD_FILENAME_PATTERN = /^store-price-comparison-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.json$/;
-const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|([+-])(\d{2}):(\d{2}))$/;
+const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const MICROSECONDS_PER_MILLISECOND = 1000n;
 const PRODUCT_IDENTITY_FIELDS = ["sku", "model", "partNumber", "part_number", "mpn"];
 
 function normalizedUrl(value) {
@@ -42,7 +43,7 @@ export function parseIsoTimestamp(value) {
   const match = ISO_TIMESTAMP_PATTERN.exec(value);
   if (!match) return null;
 
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , zone, , offsetHourText, offsetMinuteText] = match;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, fractionText = "", zone, offsetSign, offsetHourText, offsetMinuteText] = match;
   const year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
@@ -51,16 +52,24 @@ export function parseIsoTimestamp(value) {
   const second = Number(secondText);
   const offsetHour = zone === "Z" ? 0 : Number(offsetHourText);
   const offsetMinute = zone === "Z" ? 0 : Number(offsetMinuteText);
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
   if (
-    month < 1 || month > 12 ||
+    year < 1 || month < 1 || month > 12 ||
     day < 1 || day > daysInMonth ||
     hour > 23 || minute > 59 || second > 59 ||
     offsetHour > 14 || offsetMinute > 59 || (offsetHour === 14 && offsetMinute !== 0)
   ) return null;
 
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? timestamp : null;
+  const localTime = new Date(0);
+  localTime.setUTCFullYear(year, month - 1, day);
+  localTime.setUTCHours(hour, minute, second, 0);
+  const offsetMinutes = zone === "Z"
+    ? 0
+    : (offsetSign === "-" ? -1 : 1) * (offsetHour * 60 + offsetMinute);
+  const epochMilliseconds = localTime.getTime() - offsetMinutes * 60 * 1000;
+  const fractionMicroseconds = BigInt(fractionText.padEnd(6, "0") || "0");
+  return BigInt(epochMilliseconds) * MICROSECONDS_PER_MILLISECOND + fractionMicroseconds;
 }
 
 export function resolvePayloadPath(filename = DEFAULT_PAYLOAD_FILENAME) {
@@ -151,7 +160,7 @@ export function validatePayload(payload, { now = Date.now() } = {}) {
     const verifiedAt = parseIsoTimestamp(listing.verifiedAt);
     if (verifiedAt === null) {
       errors.push(`listings[${index}].verifiedAt must be a real ISO timestamp with timezone`);
-    } else if (verifiedAt > now + MAX_FUTURE_SKEW_MS) {
+    } else if (verifiedAt > BigInt(Math.trunc(now + MAX_FUTURE_SKEW_MS)) * MICROSECONDS_PER_MILLISECOND) {
       errors.push(`listings[${index}].verifiedAt is too far in the future`);
     }
 
