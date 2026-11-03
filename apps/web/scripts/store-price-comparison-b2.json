@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "preparedAt": "2026-11-03",
+  "stores": [
+    {
+      "id": "alltec",
+      "slug": "alltec",
+      "name": "Alltec",
+      "websiteUrl": "https://www.alltec.cl"
+    },
+    {
+      "id": "centrale",
+      "slug": "centrale",
+      "name": "Centrale",
+      "websiteUrl": "https://centrale.cl"
+    }
+  ],
+  "listings": [
+    {
+      "productId": "83389eb3-a9cf-4097-8b8f-5f8fe7e952e0",
+      "productSlug": "sapphire-pulse-amd-radeon-rx-7600",
+      "model": "11324-01-20G",
+      "storeId": "alltec",
+      "priceCash": 359900,
+      "priceNormal": 372496,
+      "inStock": false,
+      "productUrl": "https://www.alltec.cl/amd/2210-tv-sapphire-pulse-amd-radeon-rx-7600-8gb.html",
+      "verifiedAt": "2026-11-03T19:30:34.796-03:00"
+    },
+    {
+      "productId": "f8559d10-52cd-48f9-8b2c-73795fa36f2b",
+      "productSlug": "intel-core-i9-14900k",
+      "model": "BX8071514900K",
+      "storeId": "centrale",
+      "priceCash": 608680,
+      "priceNormal": 642160,
+      "inStock": true,
+      "productUrl": "https://centrale.cl/producto/procesador-intel-core-i9-14900k-raptor-lake-s-lga1700-uhd-graphics/",
+      "verifiedAt": "2026-11-03T19:30:48.930-03:00"
+    }
+  ]
+}
