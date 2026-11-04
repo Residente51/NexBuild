@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "preparedAt": "2026-11-04",
+  "stores": [
+    {
+      "id": "spdigital",
+      "slug": "spdigital",
+      "name": "SP Digital",
+      "websiteUrl": "https://www.spdigital.cl/",
+      "slugMigration": {
+        "from": null
+      }
+    }
+  ],
+  "listings": [
+    {
+      "productId": "864f3703-9587-4ab7-be9f-f1de0524385c",
+      "productSlug": "kingston-nv2-1tb",
+      "model": "SNV2S/1000G",
+      "verifiedIdentity": {
+        "productId": "864f3703-9587-4ab7-be9f-f1de0524385c",
+        "storeId": "spdigital",
+        "model": "SNV2S/1000G"
+      },
+      "storeId": "spdigital",
+      "priceCash": 109990,
+      "priceNormal": 114940,
+      "inStock": true,
+      "productUrl": "https://www.spdigital.cl/kingston-nv2-1tb-m2-2280-nvme-pcie/",
+      "urlMigration": {
+        "from": "https://www.spdigital.cl/producto/kingston-nv2-1tb"
+      },
+      "verifiedAt": "2026-11-04T19:27:38.582-03:00"
+    },
+    {
+      "productId": "7ba4d01e-f9cb-419b-ad51-c550400c7a4a",
+      "productSlug": "amd-ryzen-7-5800x3d",
+      "model": "100-100000651WOF",
+      "verifiedIdentity": {
+        "productId": "7ba4d01e-f9cb-419b-ad51-c550400c7a4a",
+        "storeId": "spdigital",
+        "model": "100-100000651WOF"
+      },
+      "storeId": "spdigital",
+      "priceCash": 649990,
+      "priceNormal": 679240,
+      "inStock": true,
+      "productUrl": "https://www.spdigital.cl/ryzen-7-5800x3d/",
+      "verifiedAt": "2026-11-04T19:27:38.582-03:00"
+    }
+  ]
+}
