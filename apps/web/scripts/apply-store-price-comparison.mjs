@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_PAYLOAD_FILENAME = "store-price-comparison-v1.json";
 export const APPLY_CONFIRMATION = "stores-price-comparison-v1";
+export const APPLY_CONFIRMATION_V2 = "stores-price-comparison-1-2";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PAYLOAD_FILENAME_PATTERN = /^store-price-comparison-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.json$/;
 const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|([+-])(\d{2}):(\d{2}))$/;
@@ -115,7 +116,7 @@ function productIdentityValues(product) {
 
 export function validatePayload(payload, { now = Date.now() } = {}) {
   const errors = [];
-  if (payload?.version !== 1) errors.push("version must be 1");
+  if (payload?.version !== 1 && payload?.version !== 2) errors.push("version must be 1 or 2");
   if (!Array.isArray(payload?.stores) || payload.stores.length === 0) errors.push("stores must be a non-empty array");
   if (!Array.isArray(payload?.listings) || payload.listings.length === 0) errors.push("listings must be a non-empty array");
   if (errors.length > 0) return errors;
@@ -128,6 +129,18 @@ export function validatePayload(payload, { now = Date.now() } = {}) {
     if (!/^[a-z0-9-]+$/.test(store.slug ?? "")) errors.push(`stores[${index}].slug is invalid`);
     if (typeof store.name !== "string" || store.name.trim().length === 0) errors.push(`stores[${index}].name is invalid`);
     if (!isHttpsUrl(store.websiteUrl)) errors.push(`stores[${index}].websiteUrl must use HTTPS`);
+    if (store.slugMigration !== undefined) {
+      if (payload.version !== 2) errors.push(`stores[${index}].slugMigration requires version 2`);
+      if (
+        !store.slugMigration ||
+        typeof store.slugMigration !== "object" ||
+        Array.isArray(store.slugMigration) ||
+        store.slugMigration.from !== null ||
+        Object.keys(store.slugMigration).some((key) => key !== "from")
+      ) {
+        errors.push(`stores[${index}].slugMigration must explicitly contain only from:null`);
+      }
+    }
     if (storeIds.has(store.id)) errors.push(`duplicate store id ${store.id}`);
     if (storeSlugs.has(store.slug)) errors.push(`duplicate store slug ${store.slug}`);
     const websiteUrl = normalizedUrl(store.websiteUrl);
@@ -145,6 +158,25 @@ export function validatePayload(payload, { now = Date.now() } = {}) {
     if (listing.model != null && (typeof listing.model !== "string" || listing.model.trim().length === 0)) {
       errors.push(`listings[${index}].model must be omitted or a non-empty string`);
     }
+    if (payload.version === 2) {
+      if (typeof listing.model !== "string" || listing.model.trim().length === 0) {
+        errors.push(`listings[${index}].model is required for version 2`);
+      }
+      const identity = listing.verifiedIdentity;
+      if (
+        !identity ||
+        typeof identity !== "object" ||
+        Array.isArray(identity) ||
+        identity.productId !== listing.productId ||
+        identity.storeId !== listing.storeId ||
+        identity.model !== listing.model ||
+        Object.keys(identity ?? {}).some((key) => !["productId", "storeId", "model"].includes(key))
+      ) {
+        errors.push(`listings[${index}].verifiedIdentity must exactly repeat productId, storeId, and model`);
+      }
+    } else if (listing.verifiedIdentity !== undefined || listing.urlMigration !== undefined) {
+      errors.push(`listings[${index}] migration fields require version 2`);
+    }
     if (!storeIds.has(listing.storeId)) errors.push(`listings[${index}].storeId is unknown`);
     if (listing.priceCash !== null && !isPositiveInteger(listing.priceCash)) {
       errors.push(`listings[${index}].priceCash must be null or a positive integer`);
@@ -157,6 +189,19 @@ export function validatePayload(payload, { now = Date.now() } = {}) {
     }
     if (typeof listing.inStock !== "boolean") errors.push(`listings[${index}].inStock must be boolean`);
     if (!isHttpsUrl(listing.productUrl)) errors.push(`listings[${index}].productUrl must use HTTPS`);
+    if (listing.urlMigration !== undefined) {
+      if (
+        !listing.urlMigration ||
+        typeof listing.urlMigration !== "object" ||
+        Array.isArray(listing.urlMigration) ||
+        !isHttpsUrl(listing.urlMigration.from) ||
+        Object.keys(listing.urlMigration).some((key) => key !== "from")
+      ) {
+        errors.push(`listings[${index}].urlMigration must explicitly contain only an HTTPS from URL`);
+      } else if (normalizedUrl(listing.urlMigration.from) === normalizedUrl(listing.productUrl)) {
+        errors.push(`listings[${index}].urlMigration.from must differ from productUrl`);
+      }
+    }
     const verifiedAt = parseIsoTimestamp(listing.verifiedAt);
     if (verifiedAt === null) {
       errors.push(`listings[${index}].verifiedAt must be a real ISO timestamp with timezone`);
@@ -178,6 +223,34 @@ export function validatePayload(payload, { now = Date.now() } = {}) {
 function assertNoError(result, label) {
   if (result.error) throw new Error(`${label}: ${result.error.message}`);
   return result.data ?? [];
+}
+
+function applyExactFilter(query, column, value) {
+  return value === null ? query.is(column, null) : query.eq(column, value);
+}
+
+function applyStoreVersionFilters(query, existing) {
+  let filtered = query.eq("id", existing.id);
+  for (const column of ["slug", "name", "website_url"]) {
+    filtered = applyExactFilter(filtered, column, existing[column]);
+  }
+  return filtered;
+}
+
+function applyListingVersionFilters(query, existing) {
+  let filtered = query.eq("id", existing.id);
+  for (const column of [
+    "product_id",
+    "store_id",
+    "price_cash",
+    "price_normal",
+    "in_stock",
+    "product_url",
+    "last_updated",
+  ]) {
+    filtered = applyExactFilter(filtered, column, existing[column]);
+  }
+  return filtered;
 }
 
 function listingKey(row) {
@@ -219,7 +292,7 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
       listings: payload.listings.length,
       productsCovered: new Set(payload.listings.map((listing) => listing.productId)).size,
     },
-    stores: { inserts: [], unchanged: [], conflicts: [] },
+    stores: { inserts: [], metadataUpdates: [], unchanged: [], conflicts: [] },
     listings: { inserts: [], updates: [], refreshes: [], unchanged: [], conflicts: [], blocked: [], outOfStock: [] },
   };
   const productById = new Map(products.map((product) => [product.id, product]));
@@ -227,6 +300,10 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
   const storesByUrl = groupBy(
     existingStores.filter((store) => normalizedUrl(store.website_url)),
     (store) => normalizedUrl(store.website_url),
+  );
+  const storesBySlug = groupBy(
+    existingStores.filter((store) => typeof store.slug === "string" && store.slug.length > 0),
+    (store) => store.slug,
   );
   const listingsByKey = groupBy(existingListings, listingKey);
   const listingsByUrl = groupBy(
@@ -249,6 +326,7 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
   for (const store of payload.stores) {
     const matchesById = storesById.get(store.id) ?? [];
     const matchesByUrl = storesByUrl.get(normalizedUrl(store.websiteUrl)) ?? [];
+    const matchesBySlug = storesBySlug.get(store.slug) ?? [];
     if (matchesById.length > 1) {
       plan.stores.conflicts.push(conflict("store", "duplicate-id", store.id, `Multiple existing stores use id ${store.id}`));
       continue;
@@ -257,13 +335,33 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
       plan.stores.conflicts.push(conflict("store", "duplicate-url", store.id, `Store URL is already assigned to another store: ${store.websiteUrl}`));
       continue;
     }
+    if (matchesBySlug.some((existing) => existing.id !== store.id)) {
+      plan.stores.conflicts.push(conflict("store", "duplicate-slug", store.id, `Store slug is already assigned to another store: ${store.slug}`));
+      continue;
+    }
     const existing = matchesById[0];
     if (!existing) {
+      if (store.slugMigration !== undefined) {
+        plan.stores.conflicts.push(conflict("store", "slug-migration-source-missing", store.id, `Slug migration cannot create or reassign store ${store.id}`));
+        continue;
+      }
       plan.stores.inserts.push(store);
       continue;
     }
-    if (existing.slug !== store.slug || existing.name !== store.name || normalizedUrl(existing.website_url) !== normalizedUrl(store.websiteUrl)) {
+    if (existing.name !== store.name || normalizedUrl(existing.website_url) !== normalizedUrl(store.websiteUrl)) {
       plan.stores.conflicts.push(conflict("store", "metadata-mismatch", store.id, `Existing store metadata conflicts for ${store.id}`));
+      continue;
+    }
+    if (existing.slug !== store.slug) {
+      if (store.slugMigration === undefined || existing.slug !== store.slugMigration.from) {
+        plan.stores.conflicts.push(conflict("store", "metadata-mismatch", store.id, `Existing store slug conflicts for ${store.id}`));
+        continue;
+      }
+      plan.stores.metadataUpdates.push({
+        store,
+        existing,
+        changes: { slug: { from: existing.slug, to: store.slug } },
+      });
       continue;
     }
     plan.stores.unchanged.push(store);
@@ -284,6 +382,8 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
 
     const sameKey = listingsByKey.get(key) ?? [];
     const sameUrl = listingsByUrl.get(normalizedUrl(listing.productUrl)) ?? [];
+    const migrationSourceUrl = listing.urlMigration ? normalizedUrl(listing.urlMigration.from) : null;
+    const migrationSourceRows = migrationSourceUrl ? listingsByUrl.get(migrationSourceUrl) ?? [] : [];
     if (sameKey.length > 1) {
       plan.listings.conflicts.push(conflict("listing", "duplicate-key", key, `Multiple existing listings use ${key}`));
       continue;
@@ -292,15 +392,29 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
       plan.listings.conflicts.push(conflict("listing", "duplicate-url", key, `Listing URL is already assigned to another product/store pair: ${listing.productUrl}`));
       continue;
     }
+    if (migrationSourceRows.some((row) => listingKey(row) !== key)) {
+      plan.listings.conflicts.push(conflict("listing", "url-migration-source-reassigned", key, `Legacy listing URL belongs to another product/store pair: ${listing.urlMigration.from}`));
+      continue;
+    }
 
     const existing = sameKey[0];
     if (!existing) {
+      if (listing.urlMigration !== undefined) {
+        plan.listings.conflicts.push(conflict("listing", "url-migration-source-missing", key, `URL migration cannot create or reassign ${listing.productSlug}/${listing.storeId}`));
+        continue;
+      }
       plan.listings.inserts.push(listing);
       continue;
     }
     if (normalizedUrl(existing.product_url) !== normalizedUrl(listing.productUrl)) {
-      plan.listings.conflicts.push(conflict("listing", "url-mismatch", key, `Existing listing URL conflicts for ${listing.productSlug}/${listing.storeId}`));
-      continue;
+      if (listing.urlMigration === undefined) {
+        plan.listings.conflicts.push(conflict("listing", "url-mismatch", key, `Existing listing URL conflicts for ${listing.productSlug}/${listing.storeId}`));
+        continue;
+      }
+      if (normalizedUrl(existing.product_url) !== migrationSourceUrl) {
+        plan.listings.conflicts.push(conflict("listing", "url-migration-source-mismatch", key, `Legacy listing URL does not match the explicitly approved source for ${listing.productSlug}/${listing.storeId}`));
+        continue;
+      }
     }
     const existingTimestamp = parseIsoTimestamp(existing.last_updated);
     const requestedTimestamp = parseIsoTimestamp(listing.verifiedAt);
@@ -330,6 +444,9 @@ export function buildMaintenancePlan({ payload, products, existingStores, existi
     if (existing.price_cash !== listing.priceCash) changes.priceCash = { from: existing.price_cash, to: listing.priceCash };
     if (existing.price_normal !== listing.priceNormal) changes.priceNormal = { from: existing.price_normal, to: listing.priceNormal };
     if (existing.in_stock !== listing.inStock) changes.inStock = { from: existing.in_stock, to: listing.inStock };
+    if (normalizedUrl(existing.product_url) !== normalizedUrl(listing.productUrl)) {
+      changes.productUrl = { from: existing.product_url, to: listing.productUrl };
+    }
     const update = { listing, existing, changes };
     plan.listings.updates.push(update);
     if (existing.in_stock === true && listing.inStock === false) plan.listings.outOfStock.push(update);
@@ -343,10 +460,12 @@ export function summarizePlan(plan, mode) {
     mode,
     storesPrepared: plan.prepared.stores,
     storesToInsert: plan.stores.inserts.length,
+    storesToUpdate: plan.stores.metadataUpdates.length,
     listingsPrepared: plan.prepared.listings,
     listingsToInsert: plan.listings.inserts.length,
     listingsToUpdate: plan.listings.updates.length,
     listingsToRefresh: plan.listings.refreshes.length,
+    listingUrlsToMigrate: plan.listings.updates.filter(({ changes }) => changes.productUrl !== undefined).length,
     productsCovered: plan.prepared.productsCovered,
     alreadyCurrent: plan.listings.unchanged.length,
     conflicts: plan.stores.conflicts.length + plan.listings.conflicts.length,
@@ -403,7 +522,8 @@ export class PartialApplyError extends Error {
 export async function runMaintenance({ supabase, payload, isApply = false, confirmation, logger = console.log }) {
   const validationErrors = validatePayload(payload);
   if (validationErrors.length > 0) throw new Error(`Invalid payload:\n- ${validationErrors.join("\n- ")}`);
-  if (isApply && confirmation !== APPLY_CONFIRMATION) throw new Error(`Apply requires --confirm=${APPLY_CONFIRMATION}`);
+  const applyConfirmation = payload.version === 2 ? APPLY_CONFIRMATION_V2 : APPLY_CONFIRMATION;
+  if (isApply && confirmation !== applyConfirmation) throw new Error(`Apply requires --confirm=${applyConfirmation}`);
 
   const state = await readCurrentState(supabase, payload);
   const plan = buildMaintenancePlan({ payload, ...state });
@@ -412,7 +532,7 @@ export async function runMaintenance({ supabase, payload, isApply = false, confi
   if (!isApply) {
     logger(JSON.stringify(summary, null, 2));
     logConflicts(plan, logger);
-    logger(`Dry-run only. Use --apply --confirm=${APPLY_CONFIRMATION} after authentic retailer verification.`);
+    logger(`Dry-run only. Use --apply --confirm=${applyConfirmation} after authentic retailer verification.`);
     return { summary, plan, writesPerformed: false };
   }
   if (summary.conflicts > 0 || summary.blocked > 0) {
@@ -421,7 +541,14 @@ export async function runMaintenance({ supabase, payload, isApply = false, confi
   }
 
   let writeAttempted = false;
-  const execution = { status: "applying", storesInserted: 0, listingsInserted: 0, listingsUpdated: 0, listingsRefreshed: 0 };
+  const execution = {
+    status: "applying",
+    storesInserted: 0,
+    storesUpdated: 0,
+    listingsInserted: 0,
+    listingsUpdated: 0,
+    listingsRefreshed: 0,
+  };
   let postPlan;
   let postSummary;
   try {
@@ -437,6 +564,19 @@ export async function runMaintenance({ supabase, payload, isApply = false, confi
         "Store insert failed",
       );
       execution.storesInserted = plan.stores.inserts.length;
+    }
+    for (const { store, existing } of plan.stores.metadataUpdates) {
+      writeAttempted = true;
+      const updateQuery = applyStoreVersionFilters(
+        supabase.from("stores").update({ slug: store.slug }),
+        existing,
+      );
+      const updatedRows = assertNoError(
+        await updateQuery.select("id"),
+        `Store metadata update failed for ${store.id}`,
+      );
+      if (updatedRows.length !== 1) throw new Error(`Store metadata update lost its preflight version for ${store.id}`);
+      execution.storesUpdated += 1;
     }
     if (plan.listings.inserts.length > 0) {
       writeAttempted = true;
@@ -456,17 +596,18 @@ export async function runMaintenance({ supabase, payload, isApply = false, confi
     }
     for (const { listing, existing } of plan.listings.updates) {
       writeAttempted = true;
+      const updateQuery = applyListingVersionFilters(
+        supabase.from("store_listings").update({
+          price_cash: listing.priceCash,
+          price_normal: listing.priceNormal,
+          in_stock: listing.inStock,
+          product_url: listing.productUrl,
+          last_updated: listing.verifiedAt,
+        }),
+        existing,
+      );
       const updatedRows = assertNoError(
-        await supabase.from("store_listings")
-          .update({
-            price_cash: listing.priceCash,
-            price_normal: listing.priceNormal,
-            in_stock: listing.inStock,
-            last_updated: listing.verifiedAt,
-          })
-          .eq("id", existing.id)
-          .eq("last_updated", existing.last_updated)
-          .select("id"),
+        await updateQuery.select("id"),
         `Listing update failed for ${listing.productSlug}/${listing.storeId}`,
       );
       if (updatedRows.length !== 1) throw new Error(`Listing update lost its preflight version for ${listing.productSlug}/${listing.storeId}`);
@@ -474,12 +615,12 @@ export async function runMaintenance({ supabase, payload, isApply = false, confi
     }
     for (const { listing, existing } of plan.listings.refreshes) {
       writeAttempted = true;
+      const updateQuery = applyListingVersionFilters(
+        supabase.from("store_listings").update({ last_updated: listing.verifiedAt }),
+        existing,
+      );
       const updatedRows = assertNoError(
-        await supabase.from("store_listings")
-          .update({ last_updated: listing.verifiedAt })
-          .eq("id", existing.id)
-          .eq("last_updated", existing.last_updated)
-          .select("id"),
+        await updateQuery.select("id"),
         `Listing freshness update failed for ${listing.productSlug}/${listing.storeId}`,
       );
       if (updatedRows.length !== 1) throw new Error(`Listing freshness update lost its preflight version for ${listing.productSlug}/${listing.storeId}`);
@@ -491,6 +632,7 @@ export async function runMaintenance({ supabase, payload, isApply = false, confi
     postSummary = summarizePlan(postPlan, "post-apply-dry-run");
     if (
       postSummary.storesToInsert !== 0 ||
+      postSummary.storesToUpdate !== 0 ||
       postSummary.listingsToInsert !== 0 ||
       postSummary.listingsToUpdate !== 0 ||
       postSummary.listingsToRefresh !== 0 ||
