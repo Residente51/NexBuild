@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   APPLY_CONFIRMATION,
+  APPLY_CONFIRMATION_V2,
   PartialApplyError,
   buildMaintenancePlan,
   parseCliOptions,
@@ -13,7 +14,13 @@ import {
   validatePayload,
 } from "./apply-store-price-comparison.mjs";
 
-type Store = { id: string; slug: string; name: string; websiteUrl: string };
+type Store = {
+  id: string;
+  slug: string;
+  name: string;
+  websiteUrl: string;
+  slugMigration?: { from: null };
+};
 type Listing = {
   productId: string;
   productSlug: string;
@@ -24,6 +31,8 @@ type Listing = {
   inStock: boolean;
   productUrl: string;
   verifiedAt: string;
+  verifiedIdentity?: { productId: string; storeId: string; model: string };
+  urlMigration?: { from: string };
 };
 type Payload = { version: number; stores: Store[]; listings: Listing[] };
 
@@ -33,6 +42,10 @@ const payload = JSON.parse(
 
 const b2Payload = JSON.parse(
   readFileSync(resolve(process.cwd(), "scripts/store-price-comparison-b2.json"), "utf8"),
+) as Payload;
+
+const phaseA12Payload = JSON.parse(
+  readFileSync(resolve(process.cwd(), "scripts/store-price-comparison-1-2.json"), "utf8"),
 ) as Payload;
 
 const productId = "89c2f213-78f8-4ced-b3da-32be43d29449";
@@ -57,6 +70,18 @@ const listing: Listing = {
 const basePayload: Payload = { version: 1, stores: [store], listings: [listing] };
 const product = { id: productId, slug: listing.productSlug, specs: { sku: "SKU-123" }, is_active: true };
 const existingStore = { id: store.id, slug: store.slug, name: store.name, website_url: store.websiteUrl };
+const legacyStore: Store = { ...store, slugMigration: { from: null } };
+const urlMigrationListing: Listing = {
+  ...listing,
+  productUrl: "https://example.com/products/sku-123-current",
+  verifiedIdentity: { productId, storeId: store.id, model: "SKU-123" },
+  urlMigration: { from: listing.productUrl },
+};
+const version2Payload: Payload = {
+  version: 2,
+  stores: [legacyStore],
+  listings: [urlMigrationListing],
+};
 
 function existingListing(overrides: Record<string, unknown> = {}) {
   return {
@@ -214,6 +239,39 @@ describe("Store Coverage 1.1 B2 payload", () => {
   });
 });
 
+describe("Store Coverage 1.2 Phase A payload", () => {
+  it("mantiene separados y explícitos los dos candidatos SP Digital revalidados", () => {
+    expect(validatePayload(phaseA12Payload)).toEqual([]);
+    expect(phaseA12Payload.version).toBe(2);
+    expect(phaseA12Payload.stores).toEqual([
+      expect.objectContaining({ id: "spdigital", slug: "spdigital", slugMigration: { from: null } }),
+    ]);
+    expect(phaseA12Payload.listings.map(({ productSlug, storeId }) => `${productSlug}:${storeId}`)).toEqual([
+      "kingston-nv2-1tb:spdigital",
+      "amd-ryzen-7-5800x3d:spdigital",
+    ]);
+    expect(phaseA12Payload.listings.every(({ verifiedIdentity, productId, storeId, model }) =>
+      verifiedIdentity?.productId === productId &&
+      verifiedIdentity.storeId === storeId &&
+      verifiedIdentity.model === model
+    )).toBe(true);
+  });
+
+  it("rechaza autorizaciones ambiguas de metadata o identidad", () => {
+    const wrongIdentity = {
+      ...urlMigrationListing,
+      verifiedIdentity: { ...urlMigrationListing.verifiedIdentity, model: "SKU123" },
+    };
+    expect(validatePayload({ ...version2Payload, listings: [wrongIdentity] })).toContain(
+      "listings[0].verifiedIdentity must exactly repeat productId, storeId, and model",
+    );
+    expect(validatePayload({
+      ...version2Payload,
+      stores: [{ ...legacyStore, slugMigration: { from: "other-store" } }],
+    })).toContain("stores[0].slugMigration must explicitly contain only from:null");
+  });
+});
+
 describe("store listing maintenance plan", () => {
   it("clasifica un par producto/tienda nuevo como insert", () => {
     const summary = summarizePlan(makePlan(), "dry-run");
@@ -315,6 +373,122 @@ describe("store listing maintenance plan", () => {
     });
     expect(plan.listings.conflicts).toEqual([expect.objectContaining({ code: "product-model" })]);
   });
+
+  it("autoriza solo el slug legacy nulo declarado explícitamente", () => {
+    const plan = buildMaintenancePlan({
+      payload: version2Payload,
+      products: [product],
+      existingStores: [{ ...existingStore, slug: null }],
+      existingListings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-01T12:00:00-03:00",
+      })],
+    });
+
+    expect(plan.stores.metadataUpdates).toEqual([
+      expect.objectContaining({ changes: { slug: { from: null, to: store.slug } } }),
+    ]);
+    expect(plan.stores.conflicts).toHaveLength(0);
+  });
+
+  it("mantiene metadata-mismatch para cambios de tienda no aprobados", () => {
+    const plan = buildMaintenancePlan({
+      payload: version2Payload,
+      products: [product],
+      existingStores: [{ ...existingStore, slug: null, name: "Renamed Store" }],
+      existingListings: [],
+    });
+
+    expect(plan.stores.metadataUpdates).toHaveLength(0);
+    expect(plan.stores.conflicts).toEqual([expect.objectContaining({ code: "metadata-mismatch" })]);
+  });
+
+  it("rechaza reasignar un slug que ya pertenece a otra tienda", () => {
+    const plan = buildMaintenancePlan({
+      payload: version2Payload,
+      products: [product],
+      existingStores: [
+        { ...existingStore, slug: null },
+        { id: "other-store", slug: store.slug, name: "Other Store", website_url: "https://other.example.com" },
+      ],
+      existingListings: [],
+    });
+
+    expect(plan.stores.metadataUpdates).toHaveLength(0);
+    expect(plan.stores.conflicts).toEqual([expect.objectContaining({ code: "duplicate-slug" })]);
+  });
+
+  it("clasifica una migración de URL legítima como cambio trazable", () => {
+    const plan = buildMaintenancePlan({
+      payload: version2Payload,
+      products: [product],
+      existingStores: [{ ...existingStore, slug: null }],
+      existingListings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-01T12:00:00-03:00",
+      })],
+    });
+
+    expect(plan.listings.updates).toEqual([
+      expect.objectContaining({
+        changes: expect.objectContaining({
+          productUrl: { from: listing.productUrl, to: urlMigrationListing.productUrl },
+        }),
+      }),
+    ]);
+    expect(summarizePlan(plan, "dry-run")).toMatchObject({
+      storesToUpdate: 1,
+      listingsToUpdate: 1,
+      listingUrlsToMigrate: 1,
+      conflicts: 0,
+    });
+  });
+
+  it("rechaza conflictos y reasignaciones de URL", () => {
+    const targetCollision = buildMaintenancePlan({
+      payload: version2Payload,
+      products: [product],
+      existingStores: [existingStore],
+      existingListings: [
+        existingListing({ product_url: listing.productUrl }),
+        existingListing({
+          id: "listing-2",
+          product_id: secondProductId,
+          product_url: urlMigrationListing.productUrl,
+        }),
+      ],
+    });
+    expect(targetCollision.listings.conflicts).toEqual([
+      expect.objectContaining({ code: "duplicate-url" }),
+    ]);
+
+    const reassignment = buildMaintenancePlan({
+      payload: version2Payload,
+      products: [product],
+      existingStores: [existingStore],
+      existingListings: [existingListing({
+        product_id: secondProductId,
+        product_url: listing.productUrl,
+      })],
+    });
+    expect(reassignment.listings.conflicts).toEqual([
+      expect.objectContaining({ code: "url-migration-source-reassigned" }),
+    ]);
+  });
+
+  it("bloquea una migración de URL con timestamp obsoleto", () => {
+    const plan = buildMaintenancePlan({
+      payload: version2Payload,
+      products: [product],
+      existingStores: [existingStore],
+      existingListings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-03T12:00:00-03:00",
+      })],
+    });
+    expect(plan.listings.blocked).toEqual([expect.objectContaining({ code: "stale-verified-at" })]);
+    expect(plan.listings.updates).toHaveLength(0);
+  });
 });
 
 class MutableQuery {
@@ -325,7 +499,11 @@ class MutableQuery {
   constructor(
     private readonly table: string,
     private readonly rowsByTable: Record<string, Array<Record<string, unknown>>>,
-    private readonly state: { writeAttempts: number; failOnWriteAttempt: number | null },
+    private readonly state: {
+      writeAttempts: number;
+      failOnWriteAttempt: number | null;
+      beforeWriteAttempt: ((table: string, attempt: number) => void) | null;
+    },
   ) {}
 
   select() {
@@ -338,6 +516,11 @@ class MutableQuery {
   }
 
   eq(column: string, value: unknown) {
+    this.filters.push({ column, values: [value] });
+    return this;
+  }
+
+  is(column: string, value: unknown) {
     this.filters.push({ column, values: [value] });
     return this;
   }
@@ -365,6 +548,7 @@ class MutableQuery {
     }
 
     this.state.writeAttempts += 1;
+    this.state.beforeWriteAttempt?.(this.table, this.state.writeAttempts);
     if (this.state.failOnWriteAttempt === this.state.writeAttempts) {
       this.state.failOnWriteAttempt = null;
       resolvePromise({ data: [], error: { message: "simulated mid-apply failure" } });
@@ -390,8 +574,9 @@ class MutableQuery {
 function createMutableSupabase(
   rowsByTable: Record<string, Array<Record<string, unknown>>>,
   failOnWriteAttempt: number | null = null,
+  beforeWriteAttempt: ((table: string, attempt: number) => void) | null = null,
 ) {
-  const state = { writeAttempts: 0, failOnWriteAttempt };
+  const state = { writeAttempts: 0, failOnWriteAttempt, beforeWriteAttempt };
   return {
     client: {
       from(table: string) {
@@ -540,5 +725,172 @@ describe("store listing maintenance runner", () => {
     });
     expect(recovered.summary).toMatchObject({ alreadyCurrent: 1, listingsToUpdate: 1, idempotent: true });
     expect(rows.store_listings[1]).toMatchObject({ price_cash: secondListing.priceCash, last_updated: secondListing.verifiedAt });
+  });
+
+  it("mantiene el dry-run v1.2 completamente libre de escrituras", async () => {
+    const fake = createReadOnlySupabase({
+      products: [product],
+      stores: [{ ...existingStore, slug: null }],
+      store_listings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-01T12:00:00-03:00",
+      })],
+    });
+
+    const result = await runMaintenance({
+      supabase: fake.client,
+      payload: version2Payload,
+      logger: () => undefined,
+    });
+
+    expect(result.summary).toMatchObject({
+      mode: "dry-run",
+      storesToUpdate: 1,
+      listingUrlsToMigrate: 1,
+      conflicts: 0,
+      blocked: 0,
+    });
+    expect(result.writesPerformed).toBe(false);
+    expect(fake.getWrites()).toBe(0);
+  });
+
+  it("exige una confirmación distinta y explícita para payloads v2", async () => {
+    const fake = createReadOnlySupabase({
+      products: [product],
+      stores: [{ ...existingStore, slug: null }],
+      store_listings: [],
+    });
+
+    await expect(runMaintenance({
+      supabase: fake.client,
+      payload: version2Payload,
+      isApply: true,
+      confirmation: APPLY_CONFIRMATION,
+      logger: () => undefined,
+    })).rejects.toThrow(`--confirm=${APPLY_CONFIRMATION_V2}`);
+    expect(fake.getWrites()).toBe(0);
+  });
+
+  it("aplica metadata legacy y URL con read-back idempotente", async () => {
+    const rows = {
+      products: [{ ...product }],
+      stores: [{ ...existingStore, slug: null }],
+      store_listings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-01T12:00:00-03:00",
+      })],
+    };
+    const fake = createMutableSupabase(rows);
+
+    const result = await runMaintenance({
+      supabase: fake.client,
+      payload: version2Payload,
+      isApply: true,
+      confirmation: APPLY_CONFIRMATION_V2,
+      logger: () => undefined,
+    });
+
+    expect(result.summary).toMatchObject({
+      storesToUpdate: 1,
+      listingUrlsToMigrate: 1,
+      idempotent: true,
+      execution: expect.objectContaining({ storesUpdated: 1, listingsUpdated: 1 }),
+    });
+    expect(rows.stores[0].slug).toBe(store.slug);
+    expect(rows.store_listings[0]).toMatchObject({
+      product_id: productId,
+      store_id: store.id,
+      product_url: urlMigrationListing.productUrl,
+      last_updated: urlMigrationListing.verifiedAt,
+    });
+  });
+
+  it("detecta un cambio concurrente antes de sobrescribir la oferta", async () => {
+    const rows = {
+      products: [{ ...product }],
+      stores: [{ ...existingStore }],
+      store_listings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-01T12:00:00-03:00",
+      })],
+    };
+    const fake = createMutableSupabase(rows, null, (table, attempt) => {
+      if (table === "store_listings" && attempt === 1) rows.store_listings[0].price_cash = 99_000;
+    });
+
+    await expect(runMaintenance({
+      supabase: fake.client,
+      payload: version2Payload,
+      isApply: true,
+      confirmation: APPLY_CONFIRMATION_V2,
+      logger: () => undefined,
+    })).rejects.toBeInstanceOf(PartialApplyError);
+
+    expect(rows.store_listings[0]).toMatchObject({
+      price_cash: 99_000,
+      product_url: listing.productUrl,
+      last_updated: "2026-11-01T12:00:00-03:00",
+    });
+  });
+
+  it("detecta un cambio concurrente de metadata antes de completar el slug", async () => {
+    const rows = {
+      products: [{ ...product }],
+      stores: [{ ...existingStore, slug: null }],
+      store_listings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-01T12:00:00-03:00",
+      })],
+    };
+    const fake = createMutableSupabase(rows, null, (table, attempt) => {
+      if (table === "stores" && attempt === 1) rows.stores[0].name = "Concurrent Rename";
+    });
+
+    await expect(runMaintenance({
+      supabase: fake.client,
+      payload: version2Payload,
+      isApply: true,
+      confirmation: APPLY_CONFIRMATION_V2,
+      logger: () => undefined,
+    })).rejects.toBeInstanceOf(PartialApplyError);
+
+    expect(rows.stores[0]).toMatchObject({ slug: null, name: "Concurrent Rename" });
+    expect(rows.store_listings[0].product_url).toBe(listing.productUrl);
+  });
+
+  it("recupera una falla parcial entre slug y URL al reintentar el mismo payload", async () => {
+    const rows = {
+      products: [{ ...product }],
+      stores: [{ ...existingStore, slug: null }],
+      store_listings: [existingListing({
+        product_url: listing.productUrl,
+        last_updated: "2026-11-01T12:00:00-03:00",
+      })],
+    };
+    const fake = createMutableSupabase(rows, 2);
+
+    await expect(runMaintenance({
+      supabase: fake.client,
+      payload: version2Payload,
+      isApply: true,
+      confirmation: APPLY_CONFIRMATION_V2,
+      logger: () => undefined,
+    })).rejects.toBeInstanceOf(PartialApplyError);
+    expect(rows.stores[0].slug).toBe(store.slug);
+    expect(rows.store_listings[0].product_url).toBe(listing.productUrl);
+
+    const recovered = await runMaintenance({
+      supabase: fake.client,
+      payload: version2Payload,
+      isApply: true,
+      confirmation: APPLY_CONFIRMATION_V2,
+      logger: () => undefined,
+    });
+    expect(recovered.summary).toMatchObject({
+      storesToUpdate: 0,
+      listingUrlsToMigrate: 1,
+      idempotent: true,
+    });
+    expect(rows.store_listings[0].product_url).toBe(urlMigrationListing.productUrl);
   });
 });
