@@ -22,7 +22,7 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.112.3",
     "@vercel/analytics": "^2.0.1",
-    "next": "16.2.12",
+    "next": "16.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zustand": "^5.0.15"
@@ -34,10 +34,10 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
-    "puppeteer": "^25.9.0",
+    "eslint-config-next": "16.4.6",
+    "puppeteer": "^25.13.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }
